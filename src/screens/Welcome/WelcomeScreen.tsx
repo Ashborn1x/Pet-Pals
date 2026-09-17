@@ -1,12 +1,12 @@
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WelcomeContent } from '../features/onboarding/components/WelcomeContent';
-import { WelcomeHero } from '../features/onboarding/components/WelcomeHero';
-import { useOnboarding } from '../features/onboarding/hooks/useOnboarding';
-import { onboardingStyles as styles } from '../features/onboarding/styles';
-import { WelcomeScreenProps } from '../features/onboarding/types';
+import { WelcomeContent } from '../../components/Onboarding/WelcomeContent';
+import { WelcomeHero } from '../../components/Onboarding/WelcomeHero';
+import { useOnboarding } from '../../hooks/useOnboarding';
+import { onboardingStyles as styles } from './styles';
+import { WelcomeScreenProps } from '../../types/navigation';
 
-export function WelcomeScreen({ onAddPet }: WelcomeScreenProps) {
+export function WelcomeScreen({ onAddPet, onSkip }: WelcomeScreenProps) {
   const onboarding = useOnboarding();
   const insets = useSafeAreaInsets();
 
@@ -39,6 +39,7 @@ export function WelcomeScreen({ onAddPet }: WelcomeScreenProps) {
           textOffset={onboarding.animation.textOffset}
           onSelectSlide={onboarding.setCurrentSlide}
           onPrimaryAction={handlePrimaryAction}
+          onSkip={onSkip}
           bottomInset={insets.bottom}
         />
       </View>

@@ -1,6 +1,7 @@
-import { Animated, Pressable, Text, View } from 'react-native';
-import { onboardingStyles as styles } from '../styles';
-import { OnboardingSlide } from '../types';
+import { Animated, Pressable, View } from 'react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { onboardingStyles as styles } from '../../screens/Welcome/styles';
+import { OnboardingSlide } from '../../types/navigation';
 
 type Props = {
   slide: OnboardingSlide;
@@ -14,22 +15,26 @@ type Props = {
 
 export function WelcomeHero({ slide, slideOpacity, slideScale, onPrevious, onNext, showPrevious, showNext }: Props) {
   return (
-    <View style={[styles.hero, { backgroundColor: slide.bgTint }]}>
+    <View
+      style={[styles.hero, { backgroundColor: slide.bgTint }]}
+    >
       <Animated.Image
         accessibilityLabel={slide.alt}
         source={slide.image}
         style={[styles.heroImage, { opacity: slideOpacity, transform: [{ scale: slideScale }] }]}
         resizeMode="cover"
       />
-      {showPrevious && <HeroButton label="Previous slide" symbol="‹" onPress={onPrevious} side="left" />}
-      {showNext && <HeroButton label="Next slide" symbol="›" onPress={onNext} side="right" />}
+      {showPrevious && <HeroButton label="Previous slide" onPress={onPrevious} side="left" />}
+      {showNext && <HeroButton label="Next slide" onPress={onNext} side="right" />}
     </View>
   );
 }
 
-type HeroButtonProps = { label: string; symbol: string; onPress: () => void; side: 'left' | 'right' };
+type HeroButtonProps = { label: string; onPress: () => void; side: 'left' | 'right' };
 
-function HeroButton({ label, symbol, onPress, side }: HeroButtonProps) {
+function HeroButton({ label, onPress, side }: HeroButtonProps) {
+  const Icon = side === 'left' ? ChevronLeft : ChevronRight;
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -37,7 +42,7 @@ function HeroButton({ label, symbol, onPress, side }: HeroButtonProps) {
       onPress={onPress}
       style={({ pressed }) => [styles.chevronButton, side === 'left' ? styles.leftChevron : styles.rightChevron, pressed && styles.pressed]}
     >
-      <Text style={styles.chevron}>{symbol}</Text>
+      <Icon color="#4A5D50" size={22} strokeWidth={1.8} />
     </Pressable>
   );
 }

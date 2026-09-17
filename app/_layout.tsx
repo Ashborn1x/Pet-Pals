@@ -11,6 +11,7 @@ export default function Layout() {
       <NavigationBar hidden={false} style="dark" />
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="add-pet" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );

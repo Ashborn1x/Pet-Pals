@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated } from 'react-native';
-import { ONBOARDING_SLIDES } from '../data/onboardingSlides';
+import { ONBOARDING_SLIDES } from '../constants/onboardingSlides';
 
 export function useOnboarding() {
   const [currentSlide, setCurrentSlide] = useState(0);

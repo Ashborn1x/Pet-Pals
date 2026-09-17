@@ -11,4 +11,5 @@ export type OnboardingSlide = {
 
 export type WelcomeScreenProps = {
   onAddPet: () => void;
+  onSkip?: () => void;
 };

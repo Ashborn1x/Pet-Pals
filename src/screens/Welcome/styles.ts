@@ -21,6 +21,9 @@ export const onboardingStyles = StyleSheet.create({
   primaryButton: { alignItems: 'center', backgroundColor: '#4F8060', borderColor: '#3E6B4E', borderRadius: 12, borderWidth: 1, elevation: 8, flexDirection: 'row', height: 44, justifyContent: 'center', paddingHorizontal: 20, shadowColor: '#41634E', shadowOffset: { height: 6, width: 0 }, shadowOpacity: 0.3, shadowRadius: 7, width: '100%' },
   primaryButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', includeFontPadding: false, lineHeight: 18, textAlignVertical: 'center' },
   nextArrow: { color: '#FFFFFF', fontSize: 24, fontWeight: '300', includeFontPadding: false, lineHeight: 24, marginLeft: 8, textAlignVertical: 'center' },
+  skipButton: { alignItems: 'center', height: 34, justifyContent: 'center', marginTop: 8, width: '100%' },
+  skipButtonText: { color: '#687C70', fontSize: 13, fontWeight: '600', includeFontPadding: false, lineHeight: 18, textAlign: 'center' },
+  skipButtonPlaceholder: { height: 34, marginTop: 8, width: '100%' },
   pressed: { opacity: 0.6 },
   buttonPressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
 });

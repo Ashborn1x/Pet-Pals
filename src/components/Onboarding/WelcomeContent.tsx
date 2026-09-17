@@ -1,6 +1,7 @@
 import { Animated, Pressable, Text, View } from 'react-native';
-import { ONBOARDING_SLIDES } from '../data/onboardingSlides';
-import { onboardingStyles as styles } from '../styles';
+import { ChevronRight } from 'lucide-react-native';
+import { ONBOARDING_SLIDES } from '../../constants/onboardingSlides';
+import { onboardingStyles as styles } from '../../screens/Welcome/styles';
 
 type Props = {
   slideIndex: number;
@@ -11,13 +12,16 @@ type Props = {
   textOffset: Animated.Value;
   onSelectSlide: (index: number) => void;
   onPrimaryAction: () => void;
+  onSkip?: () => void;
   bottomInset: number;
 };
 
-export function WelcomeContent({ slideIndex, title, description, isLastSlide, textOpacity, textOffset, onSelectSlide, onPrimaryAction, bottomInset }: Props) {
+export function WelcomeContent({ slideIndex, title, description, isLastSlide, textOpacity, textOffset, onSelectSlide, onPrimaryAction, onSkip, bottomInset }: Props) {
   return (
     <View style={[styles.contentSheet, { paddingBottom: Math.max(96, 30 + bottomInset) }]}>
-      <Animated.View style={[styles.textHolder, { opacity: textOpacity, transform: [{ translateY: textOffset }] }]}>
+      <Animated.View
+        style={[styles.textHolder, { opacity: textOpacity, transform: [{ translateY: textOffset }] }]}
+      >
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
       </Animated.View>
@@ -36,9 +40,16 @@ export function WelcomeContent({ slideIndex, title, description, isLastSlide, te
       </View>
       <View style={styles.actionGroup}>
         <Pressable accessibilityRole="button" onPress={onPrimaryAction} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>{isLastSlide ? 'Add a Pet' : 'Next'}</Text>
-          {!isLastSlide && <Text style={styles.nextArrow}>›</Text>}
+          <Text style={styles.primaryButtonText}>{isLastSlide ? 'Get Started' : 'Next'}</Text>
+          {!isLastSlide && <ChevronRight color="#FFFFFF" size={18} strokeWidth={2.8} />}
         </Pressable>
+        {isLastSlide ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="I’ll do this later" onPress={onSkip} style={styles.skipButton}>
+            <Text style={styles.skipButtonText}>I’ll do this later</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.skipButtonPlaceholder} pointerEvents="none" accessibilityElementsHidden />
+        )}
       </View>
     </View>
   );
