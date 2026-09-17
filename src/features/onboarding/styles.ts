@@ -1,0 +1,26 @@
+import { StyleSheet } from 'react-native';
+
+export const onboardingStyles = StyleSheet.create({
+  safeArea: { backgroundColor: '#FFF5EA', flex: 1 },
+  container: { backgroundColor: '#FFF5EA', flex: 1, overflow: 'hidden' },
+  hero: { flex: 7, flexBasis: 0, flexShrink: 1, minHeight: 0, overflow: 'hidden', position: 'relative' },
+  heroImage: { bottom: 0, height: '100%', left: 0, position: 'absolute', right: 0, width: '100%' },
+  chevronButton: { alignItems: 'center', backgroundColor: '#FFFFFFB3', borderRadius: 18, height: 32, justifyContent: 'center', position: 'absolute', top: '50%', width: 32 },
+  leftChevron: { left: 12 },
+  rightChevron: { right: 12 },
+  chevron: { color: '#4A5D50', fontSize: 28, fontWeight: '300', lineHeight: 28, marginTop: -3 },
+  contentSheet: { alignItems: 'center', backgroundColor: '#FFF5EA', borderColor: '#FFFFFFE6', borderTopLeftRadius: 38, borderTopRightRadius: 38, borderTopWidth: 1, elevation: 4, flex: 3, flexBasis: 0, flexShrink: 1, justifyContent: 'flex-start', marginTop: -24, minHeight: 0, paddingBottom: 30, paddingHorizontal: 24, paddingTop: 28, shadowColor: '#32281E', shadowOffset: { height: -8, width: 0 }, shadowOpacity: 0.08, shadowRadius: 18, zIndex: 2 },
+  textHolder: { alignItems: 'center', height: 132, justifyContent: 'center', marginBottom: 16, maxWidth: 290, width: '100%' },
+  title: { color: '#1A221D', fontSize: 27, fontWeight: '800', lineHeight: 32, marginBottom: 10, textAlign: 'center' },
+  description: { color: '#525F56', fontSize: 14, lineHeight: 20, maxWidth: 280, textAlign: 'center' },
+  pagination: { alignItems: 'center', flexDirection: 'row', gap: 6, marginBottom: 26 },
+  dot: { borderRadius: 5, height: 8 },
+  activeDot: { backgroundColor: '#202E24', width: 24 },
+  inactiveDot: { backgroundColor: '#D1CBC0', width: 8 },
+  actionGroup: { alignItems: 'center', maxWidth: 320, width: '100%', zIndex: 10 },
+  primaryButton: { alignItems: 'center', backgroundColor: '#4F8060', borderColor: '#3E6B4E', borderRadius: 12, borderWidth: 1, elevation: 8, flexDirection: 'row', height: 44, justifyContent: 'center', paddingHorizontal: 20, shadowColor: '#41634E', shadowOffset: { height: 6, width: 0 }, shadowOpacity: 0.3, shadowRadius: 7, width: '100%' },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', includeFontPadding: false, lineHeight: 18, textAlignVertical: 'center' },
+  nextArrow: { color: '#FFFFFF', fontSize: 24, fontWeight: '300', includeFontPadding: false, lineHeight: 24, marginLeft: 8, textAlignVertical: 'center' },
+  pressed: { opacity: 0.6 },
+  buttonPressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
+});
