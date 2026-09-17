@@ -7,7 +7,7 @@ export default function AddPetRoute() {
 
   const handleSave = () => {
     Alert.alert('Pet saved', 'Your pet profile has been created.', [
-      { text: 'OK', onPress: () => router.back() },
+      { text: 'OK', onPress: () => router.replace('/dashboard') },
     ]);
   };
 

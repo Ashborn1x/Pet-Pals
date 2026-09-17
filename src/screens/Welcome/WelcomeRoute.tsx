@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { WelcomeScreen } from './WelcomeScreen';
 
@@ -10,7 +9,7 @@ export function WelcomeRoute() {
   };
 
   const handleSkip = () => {
-    Alert.alert('Maybe later', 'You can add a pet anytime from the home screen.');
+    router.replace('/dashboard');
   };
 
   return <WelcomeScreen onAddPet={handleAddPet} onSkip={handleSkip} />;
