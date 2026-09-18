@@ -1,13 +1,5 @@
-import { useRouter } from 'expo-router';
-import { DashboardScreen } from '../src/screens/Dashboard/DashboardScreen';
+import { DashboardWithNav } from '../src/components/Navigation/DashboardWithNav';
 
 export default function DashboardRoute() {
-  const router = useRouter();
-
-  return (
-    <DashboardScreen
-      onOpenAddPet={() => router.push('/add-pet')}
-      onReturnToWelcome={() => router.replace('/')}
-    />
-  );
+  return <DashboardWithNav />;
 }
