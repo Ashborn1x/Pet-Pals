@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CalendarDays, ChevronLeft, ChevronRight, Circle, Clock, Plus, Syringe, Utensils } from 'lucide-react-native';
-import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { getCareLogs, getPets } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
 import type { CareLog, Pet } from '../../types/pet';
@@ -12,7 +12,6 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 type Props = { onOpenAddPet?: () => void };
 
 export function CalendarScreen({ onOpenAddPet }: Props) {
-  const loading = useSkeletonLoading();
   const db = useSQLiteContext();
   const today = new Date();
   const [pets, setPets] = useState<Pet[]>([]);
@@ -33,7 +32,7 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
       .finally(() => setDataLoading(false));
   }, [db]);
 
-  if (loading || dataLoading) return <SkeletonScreen variant="calendar" />;
+  if (dataLoading) return <SkeletonScreen variant="calendar" />;
 
   const changeMonth = (direction: number) => {
     setMonth((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));

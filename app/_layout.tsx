@@ -3,17 +3,34 @@ import { Stack } from 'expo-router';
 import { usePathname } from 'expo-router';
 import { NavigationBar } from 'expo-navigation-bar';
 import { StatusBar } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSharedValue } from 'react-native-reanimated';
 import { SQLiteProvider } from 'expo-sqlite';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeDatabase } from '../src/database/petpalsDatabase';
 import { ONBOARDING_COMPLETED_KEY } from '../src/constants/storage';
 import { UniversalNav } from '../src/components/Navigation/UniversalNav';
+import { MAIN_TAB_ROUTES, MainTabCarousel } from '../src/components/Navigation/MainTabCarousel';
 import { useEffect, useState } from 'react';
 
 export default function Layout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SQLiteProvider databaseName="petpals.db" onInit={initializeDatabase}>
+        <SafeAreaProvider>
+          <AppContent />
+        </SafeAreaProvider>
+      </SQLiteProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function AppContent() {
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const tabProgress = useSharedValue(0);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   useEffect(() => {
@@ -21,32 +38,36 @@ export default function Layout() {
   }, []);
 
   const showNavigation = pathname !== '/' || onboardingComplete;
+  const showMainCarousel = MAIN_TAB_ROUTES.includes(pathname as (typeof MAIN_TAB_ROUTES)[number]);
 
   return (
-    <SQLiteProvider databaseName="petpals.db" onInit={initializeDatabase}>
-      <SafeAreaProvider>
-        <StatusBar hidden={false} barStyle="dark-content" backgroundColor="#FFF5EA" translucent={false} />
-        <NavigationBar hidden={false} style="dark" />
+    <>
+      <StatusBar hidden={false} barStyle="dark-content" backgroundColor="#FFF5EA" translucent={false} />
+      <NavigationBar hidden={false} style="dark" />
+      <View style={{ flex: 1 }}>
         <View style={{ flex: 1 }}>
-          <View style={{ flex: 1 }}>
-            <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="add-pet" options={{ headerShown: false }} />
-            <Stack.Screen name="dashboard" options={{ headerShown: false }} />
-            <Stack.Screen name="pets" options={{ headerShown: false }} />
-            <Stack.Screen name="pet-profile" options={{ headerShown: false }} />
-            <Stack.Screen name="calendar" options={{ headerShown: false }} />
-            <Stack.Screen name="notifications" options={{ headerShown: false }} />
-            <Stack.Screen name="settings" options={{ headerShown: false }} />
-            </Stack>
-          </View>
-          {showNavigation && (
-            <View pointerEvents="box-none" style={{ bottom: 0, elevation: 1000, height: 92, justifyContent: 'flex-end', left: 0, position: 'absolute', right: 0, zIndex: 1000 }}>
-              <UniversalNav />
+          <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="add-pet" options={{ headerShown: false }} />
+              <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+              <Stack.Screen name="pets" options={{ headerShown: false }} />
+              <Stack.Screen name="pet-profile" options={{ headerShown: false }} />
+              <Stack.Screen name="calendar" options={{ headerShown: false }} />
+              <Stack.Screen name="notifications" options={{ headerShown: false }} />
+              <Stack.Screen name="settings" options={{ headerShown: false }} />
+          </Stack>
+          {showMainCarousel && (
+            <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+              <MainTabCarousel progress={tabProgress} />
             </View>
           )}
         </View>
-      </SafeAreaProvider>
-    </SQLiteProvider>
+        {showNavigation && (
+          <View pointerEvents="box-none" style={{ bottom: insets.bottom + 8, elevation: 1000, height: 92, justifyContent: 'flex-end', left: 0, position: 'absolute', right: 0, zIndex: 1000 }}>
+            <UniversalNav progress={tabProgress} />
+          </View>
+        )}
+      </View>
+    </>
   );
 }

@@ -3,7 +3,7 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { Activity, ArrowLeft, CalendarDays, Check, CheckCircle2, Circle, Droplets, Heart, Pencil, Phone, Plus, ShieldCheck, Utensils, Weight } from 'lucide-react-native';
 import { Defs, LinearGradient, Path, Stop, Svg, Circle as SvgCircle } from 'react-native-svg';
 import { CareLog, Pet } from '../../types/pet';
-import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { getCareLogs, getPet, updateCareLog } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
 
@@ -17,7 +17,6 @@ const avatarSources = {
 };
 
 export function PetProfileScreen({ petId, onBack }: Props) {
-  const loading = useSkeletonLoading();
   const db = useSQLiteContext();
   const [pet, setPet] = useState<Pet>();
   const [dataLoading, setDataLoading] = useState(true);
@@ -39,7 +38,7 @@ export function PetProfileScreen({ petId, onBack }: Props) {
     setLogs((current) => current.map((log) => log.id === id ? { ...log, completed: !log.completed } : log));
   };
 
-  if (loading || dataLoading || !pet) return <SkeletonScreen variant="pets" />;
+  if (dataLoading || !pet) return <SkeletonScreen variant="pets" />;
 
   return (
     <View style={styles.screen}>
@@ -117,7 +116,7 @@ function ActivityPanel({ logs, completedLogs, onToggleLog, pet }: { logs: CareLo
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: '#FFFFFF', flex: 1 },
-  scrollContent: { paddingBottom: 24 },
+  scrollContent: { paddingBottom: 140 },
   hero: { backgroundColor: '#EFECE6', height: 280, position: 'relative' },
   heroImage: { height: '100%', width: '100%' },
   heroShade: { backgroundColor: '#00000022', height: 90, left: 0, position: 'absolute', right: 0, top: 0 },

@@ -1,19 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 export type SkeletonVariant = 'dashboard' | 'pets' | 'calendar' | 'notifications' | 'settings';
-
-export function useSkeletonLoading(duration = 550) {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), duration);
-    return () => clearTimeout(timer);
-  }, [duration]);
-
-  return loading;
-}
 
 export function SkeletonScreen({ variant }: { variant: SkeletonVariant }) {
   return (

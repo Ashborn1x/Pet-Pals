@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 export const dashboardStyles = StyleSheet.create({
   screen: { backgroundColor: '#F1EDE3', flex: 1 },
-  content: { paddingBottom: 32, paddingHorizontal: 20, paddingTop: 18 },
+  content: { paddingBottom: 140, paddingHorizontal: 20, paddingTop: 18 },
   header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18 },
   greeting: { color: '#1F2E23', fontSize: 27, fontWeight: '800', letterSpacing: -0.7 },
   greetingSubtext: { color: '#718276', fontSize: 13, marginTop: 4 },

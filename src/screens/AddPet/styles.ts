@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 export const addPetStyles = StyleSheet.create({
   screen: { backgroundColor: '#F7F4EC', flex: 1 },
-  scrollContent: { paddingBottom: 22, paddingHorizontal: 24, paddingTop: 12 },
+  scrollContent: { paddingBottom: 140, paddingHorizontal: 24, paddingTop: 12 },
   backButton: { alignItems: 'center', backgroundColor: '#EAE5DA', borderRadius: 22, height: 44, justifyContent: 'center', width: 44 },
   backArrow: { color: '#2C3B30', fontSize: 34, fontWeight: '300', lineHeight: 34, marginTop: -4 },
   heading: { marginBottom: 20, marginTop: 18 },

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Bell, CheckCheck, CircleAlert, Droplets, Flame } from 'lucide-react-native';
-import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
 
 type NotificationItem = {
   id: string;
@@ -18,11 +17,8 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 export function NotificationsScreen() {
-  const loading = useSkeletonLoading();
   const [readIds, setReadIds] = useState<string[]>([]);
   const allRead = readIds.length === INITIAL_NOTIFICATIONS.length;
-
-  if (loading) return <SkeletonScreen variant="notifications" />;
 
   const markAllRead = () => setReadIds(INITIAL_NOTIFICATIONS.map((item) => item.id));
   const markRead = (id: string) => setReadIds((current) => current.includes(id) ? current : [...current, id]);

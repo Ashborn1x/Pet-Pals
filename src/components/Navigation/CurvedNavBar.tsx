@@ -1,6 +1,6 @@
 import { Bell, CalendarDays, Home, PawPrint, Settings } from 'lucide-react-native';
-import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated, { Extrapolation, interpolate, useAnimatedProps, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { Defs, LinearGradient, Path, Stop, Svg } from 'react-native-svg';
 
 export type NavTabId = 'home' | 'pets' | 'calendar' | 'notifications' | 'settings';
@@ -8,6 +8,7 @@ export type NavTabId = 'home' | 'pets' | 'calendar' | 'notifications' | 'setting
 type Props = {
   activeTab: NavTabId;
   onTabChange: (tab: NavTabId) => void;
+  progress: SharedValue<number>;
 };
 
 const NAV_TABS = [
@@ -22,26 +23,19 @@ const BAR_HEIGHT = 62;
 const CORNER_RADIUS = 18;
 const HORIZONTAL_INSET = 24;
 const BUBBLE_RADIUS = 23;
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-export function CurvedNavBar({ activeTab, onTabChange }: Props) {
+export function CurvedNavBar({ activeTab, onTabChange, progress }: Props) {
   const { width: screenWidth } = useWindowDimensions();
   const barWidth = Math.min(Math.max(screenWidth - 16, 280), 360);
   const tabWidth = (barWidth - HORIZONTAL_INSET * 2) / NAV_TABS.length;
   const activeIndex = Math.max(0, NAV_TABS.findIndex((tab) => tab.id === activeTab));
-  const activeX = HORIZONTAL_INSET + (activeIndex + 0.5) * tabWidth;
-  const bubbleX = useRef(new Animated.Value(activeX - BUBBLE_RADIUS)).current;
-  const ActiveIcon = NAV_TABS[activeIndex].icon;
-  const path = useMemo(() => createBarPath(barWidth, activeX), [activeX, barWidth]);
-
-  useEffect(() => {
-    Animated.spring(bubbleX, {
-      toValue: activeX - BUBBLE_RADIUS,
-      damping: 18,
-      stiffness: 260,
-      mass: 0.7,
-      useNativeDriver: true,
-    }).start();
-  }, [activeX, bubbleX]);
+  const animatedPathProps = useAnimatedProps(() => ({
+    d: createBarPath(barWidth, HORIZONTAL_INSET + (progress.value + 0.5) * tabWidth),
+  }), [barWidth, tabWidth]);
+  const bubbleStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: HORIZONTAL_INSET + (progress.value + 0.5) * tabWidth - BUBBLE_RADIUS }],
+  }), [tabWidth]);
 
   return (
     <View style={styles.outer}>
@@ -54,17 +48,18 @@ export function CurvedNavBar({ activeTab, onTabChange }: Props) {
               <Stop offset="100%" stopColor="#30543E" />
             </LinearGradient>
           </Defs>
-          <Path d={path} fill="url(#petPalsSageNav)" />
+          <AnimatedPath animatedProps={animatedPathProps} fill="url(#petPalsSageNav)" />
         </Svg>
 
-        <Animated.View style={[styles.activeBubble, { transform: [{ translateX: bubbleX }] }]}>
-          <ActiveIcon color="#FFFFFF" size={20} strokeWidth={2.4} />
+        <Animated.View style={[styles.activeBubble, bubbleStyle]}>
+          {NAV_TABS.map((tab, index) => <AnimatedNavIcon key={tab.id} icon={tab.icon} index={index} progress={progress} />)}
         </Animated.View>
 
         <View style={styles.tabRow}>
           {NAV_TABS.map((tab) => {
             const Icon = tab.icon;
             const selected = tab.id === activeTab;
+            const tabIndex = NAV_TABS.findIndex((item) => item.id === tab.id);
 
             return (
               <Pressable
@@ -75,7 +70,7 @@ export function CurvedNavBar({ activeTab, onTabChange }: Props) {
                 onPress={() => onTabChange(tab.id)}
                 style={styles.tabButton}
               >
-                {!selected && <Icon color="#FFFFFF" size={20} strokeWidth={2.2} />}
+                <AnimatedTabIcon icon={Icon} index={tabIndex} progress={progress} />
               </Pressable>
             );
           })}
@@ -85,7 +80,33 @@ export function CurvedNavBar({ activeTab, onTabChange }: Props) {
   );
 }
 
+function AnimatedNavIcon({ icon: Icon, index, progress }: { icon: typeof Home; index: number; progress: SharedValue<number> }) {
+  const iconStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [index - 1, index, index + 1], [0, 1, 0], Extrapolation.CLAMP),
+    transform: [{ scale: interpolate(progress.value, [index - 1, index, index + 1], [0.82, 1, 0.82], Extrapolation.CLAMP) }],
+  }), [index]);
+
+  return (
+    <Animated.View pointerEvents="none" style={[styles.iconLayer, iconStyle]}>
+      <Icon color="#FFFFFF" size={20} strokeWidth={2.4} />
+    </Animated.View>
+  );
+}
+
+function AnimatedTabIcon({ icon: Icon, index, progress }: { icon: typeof Home; index: number; progress: SharedValue<number> }) {
+  const iconStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [index - 0.5, index, index + 0.5], [1, 0, 1], Extrapolation.CLAMP),
+  }), [index]);
+
+  return (
+    <Animated.View style={iconStyle}>
+      <Icon color="#FFFFFF" size={20} strokeWidth={2.2} />
+    </Animated.View>
+  );
+}
+
 function createBarPath(width: number, activeX: number) {
+  'worklet';
   const cutoutRadius = 31;
   const shoulderRadius = 12;
   const notchHalf = cutoutRadius + shoulderRadius;
@@ -117,6 +138,7 @@ const styles = StyleSheet.create({
   container: { height: BAR_HEIGHT, position: 'relative' },
   background: { elevation: 8, shadowColor: '#2D4B37', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.25, shadowRadius: 12 },
   activeBubble: { alignItems: 'center', backgroundColor: '#456E55', borderColor: 'rgba(255,255,255,0.55)', borderRadius: BUBBLE_RADIUS, borderWidth: 1, elevation: 6, height: BUBBLE_RADIUS * 2, justifyContent: 'center', position: 'absolute', shadowColor: '#2D4B37', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.4, shadowRadius: 8, top: -11, width: BUBBLE_RADIUS * 2 },
+  iconLayer: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
   tabRow: { alignItems: 'center', flexDirection: 'row', height: BAR_HEIGHT, paddingHorizontal: HORIZONTAL_INSET, position: 'absolute', width: '100%' },
   tabButton: { alignItems: 'center', flex: 1, height: BAR_HEIGHT, justifyContent: 'center' },
 });

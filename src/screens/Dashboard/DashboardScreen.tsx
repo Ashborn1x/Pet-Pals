@@ -13,7 +13,7 @@ import {
   Weight,
   X,
 } from 'lucide-react-native';
-import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { addCareLog, getCareLogs, getPets, updateCareLog } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
 import { CareLog, CareType, Pet } from '../../types/pet';
@@ -33,7 +33,6 @@ function CareIcon({ type, color = '#557A63', size = 15 }: { type: CareType; colo
 }
 
 export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
-  const loading = useSkeletonLoading();
   const db = useSQLiteContext();
   const [pets, setPets] = useState<Pet[]>([]);
   const [logs, setLogs] = useState<CareLog[]>([]);
@@ -87,7 +86,7 @@ export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
 
   const sourceForPet = (pet: Pet) => avatarSources[pet.avatar];
 
-  if (loading || dataLoading || !currentPet) return <SkeletonScreen variant="dashboard" />;
+  if (dataLoading || !currentPet) return <SkeletonScreen variant="dashboard" />;
 
   return (
     <View style={styles.screen}>

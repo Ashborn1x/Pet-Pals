@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CalendarDays, Check, CheckCircle2, ChevronRight, PawPrint, Plus, Search, SlidersHorizontal, Trash2, Weight, X } from 'lucide-react-native';
-import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { deletePet, getCareLogs, getPets } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Pet } from '../../types/pet';
@@ -16,7 +16,6 @@ const avatarSources = {
 };
 
 export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
-  const loading = useSkeletonLoading();
   const db = useSQLiteContext();
   const [petsData, setPetsData] = useState<Pet[]>([]);
   const [logs, setLogs] = useState<import('../../types/pet').CareLog[]>([]);
@@ -64,7 +63,7 @@ export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
     );
   };
 
-  if (loading || dataLoading) return <SkeletonScreen variant="pets" />;
+  if (dataLoading) return <SkeletonScreen variant="pets" />;
 
   return (
     <View style={styles.screen}>
@@ -125,34 +124,36 @@ function PetCard({ pet, logs: allLogs, selected, onPress, onDelete }: { pet: Pet
   const needsAttention = pet.name === 'Milo' || pet.breed.toLowerCase().includes('shih tzu');
 
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[styles.petCard, selected && styles.petCardSelected]}>
-      <Image source={avatarSources[pet.avatar]} style={styles.petImage} />
-      <View style={styles.petDetails}>
-        <View style={styles.petTitleRow}>
-          <Text numberOfLines={1} style={styles.petName}>{pet.name}</Text>
-          <View style={[styles.statusPill, needsAttention ? styles.attentionPill : styles.healthyPill]}>
-            <View style={[styles.statusDot, needsAttention ? styles.attentionDot : styles.healthyDot]} />
-            <Text style={[styles.statusText, needsAttention ? styles.attentionText : styles.healthyText]}>{needsAttention ? 'Needs Attention' : 'Healthy'}</Text>
+    <View style={[styles.petCard, selected && styles.petCardSelected]}>
+      <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={styles.petCardContent}>
+        <Image source={avatarSources[pet.avatar]} style={styles.petImage} />
+        <View style={styles.petDetails}>
+          <View style={styles.petTitleRow}>
+            <Text numberOfLines={1} style={styles.petName}>{pet.name}</Text>
+            <View style={[styles.statusPill, needsAttention ? styles.attentionPill : styles.healthyPill]}>
+              <View style={[styles.statusDot, needsAttention ? styles.attentionDot : styles.healthyDot]} />
+              <Text style={[styles.statusText, needsAttention ? styles.attentionText : styles.healthyText]}>{needsAttention ? 'Needs Attention' : 'Healthy'}</Text>
+            </View>
+          </View>
+          <Text numberOfLines={1} style={styles.breed}>{pet.breed}</Text>
+          <View style={styles.metrics}>
+            <View style={styles.metric}><Weight color="#718276" size={14} /><Text style={styles.metricText}>{pet.weight} {pet.weightUnit}</Text></View>
+            <View style={styles.metric}><CalendarDays color="#718276" size={14} /><Text style={styles.metricText}>{pet.ageYears} {pet.ageYears === 1 ? 'yr' : 'yrs'}{pet.ageMonths ? ` ${pet.ageMonths}m` : ''}</Text></View>
+            <View style={styles.metric}><CheckCircle2 color="#467356" size={14} /><Text style={styles.doneText}>{completedCount}/{logs.length || 3} Done</Text></View>
           </View>
         </View>
-        <Text numberOfLines={1} style={styles.breed}>{pet.breed}</Text>
-        <View style={styles.metrics}>
-          <View style={styles.metric}><Weight color="#718276" size={14} /><Text style={styles.metricText}>{pet.weight} {pet.weightUnit}</Text></View>
-          <View style={styles.metric}><CalendarDays color="#718276" size={14} /><Text style={styles.metricText}>{pet.ageYears} {pet.ageYears === 1 ? 'yr' : 'yrs'}{pet.ageMonths ? ` ${pet.ageMonths}m` : ''}</Text></View>
-          <View style={styles.metric}><CheckCircle2 color="#467356" size={14} /><Text style={styles.doneText}>{completedCount}/{logs.length || 3} Done</Text></View>
-        </View>
-      </View>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${pet.name}`} onPress={(event) => { event.stopPropagation(); onDelete(); }} style={styles.deleteButton}>
+        <ChevronRight color={selected ? '#527763' : '#BAC2BB'} size={17} />
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${pet.name}`} onPress={onDelete} style={styles.deleteButton}>
         <Trash2 color="#B56B5A" size={16} strokeWidth={2} />
       </Pressable>
-      <ChevronRight color={selected ? '#527763' : '#BAC2BB'} size={17} />
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: '#F1EDE3', flex: 1 },
-  content: { padding: 20, paddingBottom: 28 },
+  content: { padding: 20, paddingBottom: 140 },
   header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', paddingTop: 4 },
   title: { color: '#1B2B20', fontSize: 28, fontWeight: '800', letterSpacing: -0.8 },
   subtitle: { color: '#718276', fontSize: 13, marginTop: 3 },
@@ -170,6 +171,7 @@ const styles = StyleSheet.create({
   clearSearch: { alignItems: 'center', backgroundColor: '#DDD6C9', borderRadius: 10, height: 20, justifyContent: 'center', width: 20 },
   petList: { gap: 12, marginTop: 14 },
   petCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#EDE7DC', borderRadius: 26, borderWidth: 1, elevation: 2, flexDirection: 'row', minHeight: 112, padding: 14, shadowColor: '#28372D', shadowOpacity: 0.06, shadowRadius: 10 },
+  petCardContent: { alignItems: 'center', flex: 1, flexDirection: 'row', minWidth: 0 },
   petCardSelected: { borderColor: '#527763', borderWidth: 1.5, shadowOpacity: 0.12 },
   deleteButton: { alignItems: 'center', backgroundColor: '#FBEAE5', borderRadius: 16, height: 32, justifyContent: 'center', marginLeft: 6, width: 32 },
   petImage: { backgroundColor: '#EFE9DF', borderColor: '#EAE4D7', borderRadius: 21, borderWidth: 1, height: 82, width: 82 },
