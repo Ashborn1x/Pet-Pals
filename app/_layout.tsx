@@ -23,6 +23,9 @@ export default function Layout() {
             <Stack.Screen name="dashboard" options={{ headerShown: false }} />
             <Stack.Screen name="pets" options={{ headerShown: false }} />
             <Stack.Screen name="pet-profile" options={{ headerShown: false }} />
+            <Stack.Screen name="calendar" options={{ headerShown: false }} />
+            <Stack.Screen name="notifications" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ headerShown: false }} />
           </Stack>
         </View>
         {showNavigation && (

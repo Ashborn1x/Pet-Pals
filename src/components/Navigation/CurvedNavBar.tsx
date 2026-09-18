@@ -1,9 +1,9 @@
-import { Bell, CalendarDays, Home, PawPrint } from 'lucide-react-native';
+import { Bell, CalendarDays, Home, PawPrint, Settings } from 'lucide-react-native';
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Defs, LinearGradient, Path, Stop, Svg } from 'react-native-svg';
 
-export type NavTabId = 'home' | 'pets' | 'calendar' | 'notifications';
+export type NavTabId = 'home' | 'pets' | 'calendar' | 'notifications' | 'settings';
 
 type Props = {
   activeTab: NavTabId;
@@ -15,6 +15,7 @@ const NAV_TABS = [
   { id: 'pets' as const, label: 'My Pets', icon: PawPrint },
   { id: 'calendar' as const, label: 'Calendar', icon: CalendarDays },
   { id: 'notifications' as const, label: 'Notification', icon: Bell },
+  { id: 'settings' as const, label: 'Settings', icon: Settings },
 ];
 
 const BAR_HEIGHT = 62;
