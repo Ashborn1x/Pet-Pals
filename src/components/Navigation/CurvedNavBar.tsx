@@ -113,7 +113,7 @@ function createBarPath(width: number, activeX: number) {
 }
 
 const styles = StyleSheet.create({
-  outer: { alignItems: 'center', paddingBottom: 12 },
+  outer: { alignItems: 'center', elevation: 1000, paddingBottom: 12, position: 'relative', width: '100%', zIndex: 1000 },
   container: { height: BAR_HEIGHT, position: 'relative' },
   background: { elevation: 8, shadowColor: '#2D4B37', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.25, shadowRadius: 12 },
   activeBubble: { alignItems: 'center', backgroundColor: '#456E55', borderColor: 'rgba(255,255,255,0.55)', borderRadius: BUBBLE_RADIUS, borderWidth: 1, elevation: 6, height: BUBBLE_RADIUS * 2, justifyContent: 'center', position: 'absolute', shadowColor: '#2D4B37', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.4, shadowRadius: 8, top: -11, width: BUBBLE_RADIUS * 2 },

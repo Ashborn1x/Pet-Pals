@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Activity, ArrowLeft, CalendarDays, Check, CheckCircle2, Circle, Droplets, Heart, Pencil, Phone, Plus, ShieldCheck, Utensils, Weight } from 'lucide-react-native';
 import { Defs, LinearGradient, Path, Stop, Svg, Circle as SvgCircle } from 'react-native-svg';
-import { INITIAL_LOGS, INITIAL_PETS } from '../../constants/initialPets';
 import { CareLog, Pet } from '../../types/pet';
+import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { getCareLogs, getPet, updateCareLog } from '../../database/petpalsDatabase';
+import { useSQLiteContext } from 'expo-sqlite';
 
 type Props = { petId?: string; onBack: () => void };
 type ProfileTab = 'health' | 'diet' | 'activity';
@@ -15,13 +17,29 @@ const avatarSources = {
 };
 
 export function PetProfileScreen({ petId, onBack }: Props) {
-  const pet = useMemo(() => INITIAL_PETS.find((item) => item.id === petId) ?? INITIAL_PETS[0], [petId]);
+  const loading = useSkeletonLoading();
+  const db = useSQLiteContext();
+  const [pet, setPet] = useState<Pet>();
+  const [dataLoading, setDataLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ProfileTab>('health');
-  const [logs, setLogs] = useState<CareLog[]>(INITIAL_LOGS);
-  const petLogs = logs.filter((log) => log.petId === pet.id);
+  const [logs, setLogs] = useState<CareLog[]>([]);
+
+  useEffect(() => {
+    Promise.all([petId ? getPet(db, petId) : Promise.resolve(undefined), getCareLogs(db)])
+      .then(([nextPet, nextLogs]) => { setPet(nextPet); setLogs(nextLogs); })
+      .finally(() => setDataLoading(false));
+  }, [db, petId]);
+
+  const petLogs = pet ? logs.filter((log) => log.petId === pet.id) : [];
   const completedLogs = petLogs.filter((log) => log.completed).length;
 
-  const toggleLog = (id: string) => setLogs((current) => current.map((log) => log.id === id ? { ...log, completed: !log.completed } : log));
+  const toggleLog = async (id: string) => {
+    const nextCompleted = !logs.find((log) => log.id === id)?.completed;
+    await updateCareLog(db, id, nextCompleted);
+    setLogs((current) => current.map((log) => log.id === id ? { ...log, completed: !log.completed } : log));
+  };
+
+  if (loading || dataLoading || !pet) return <SkeletonScreen variant="pets" />;
 
   return (
     <View style={styles.screen}>

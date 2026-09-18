@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import {
   Check,
@@ -13,7 +13,9 @@ import {
   Weight,
   X,
 } from 'lucide-react-native';
-import { INITIAL_LOGS, INITIAL_PETS } from '../../constants/initialPets';
+import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { addCareLog, getCareLogs, getPets, updateCareLog } from '../../database/petpalsDatabase';
+import { useSQLiteContext } from 'expo-sqlite';
 import { CareLog, CareType, Pet } from '../../types/pet';
 import { dashboardStyles as styles } from './styles';
 
@@ -31,9 +33,12 @@ function CareIcon({ type, color = '#557A63', size = 15 }: { type: CareType; colo
 }
 
 export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
-  const pets = INITIAL_PETS;
-  const [logs, setLogs] = useState(INITIAL_LOGS);
-  const [selectedPetId, setSelectedPetId] = useState(INITIAL_PETS[0].id);
+  const loading = useSkeletonLoading();
+  const db = useSQLiteContext();
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [logs, setLogs] = useState<CareLog[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [selectedPetId, setSelectedPetId] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [quickLogOpen, setQuickLogOpen] = useState(false);
   const [logType, setLogType] = useState<CareType>('walk');
@@ -42,15 +47,27 @@ export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
 
   const currentPet = pets.find((pet) => pet.id === selectedPetId) ?? pets[0];
   const displayedLogs = useMemo(
-    () => showAll ? logs : logs.filter((log) => log.petId === currentPet.id),
-    [currentPet.id, logs, showAll],
+    () => !currentPet ? [] : showAll ? logs : logs.filter((log) => log.petId === currentPet.id),
+    [currentPet, logs, showAll],
   );
   const completedCount = displayedLogs.filter((log) => log.completed).length;
   const nextLog = displayedLogs.find((log) => !log.completed);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Morning, Jordan!' : hour < 17 ? 'Afternoon, Jordan!' : 'Evening, Jordan!';
 
-  const toggleLog = (id: string) => {
+  useEffect(() => {
+    Promise.all([getPets(db), getCareLogs(db)])
+      .then(([nextPets, nextLogs]) => {
+        setPets(nextPets);
+        setLogs(nextLogs);
+        setSelectedPetId((current) => current || nextPets[0]?.id || '');
+      })
+      .finally(() => setDataLoading(false));
+  }, [db]);
+
+  const toggleLog = async (id: string) => {
+    const nextCompleted = !logs.find((log) => log.id === id)?.completed;
+    await updateCareLog(db, id, nextCompleted);
     setLogs((current) => current.map((log) => log.id === id ? { ...log, completed: !log.completed } : log));
   };
 
@@ -59,15 +76,18 @@ export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
     setLogTitle(type === 'walk' ? `Walk ${currentPet.name}` : type === 'meal' ? 'Afternoon Meal' : type === 'water' ? 'Fresh Water Refill' : 'Daily Vitamins');
   };
 
-  const createLog = () => {
-    if (!logTitle.trim()) return;
-    setLogs((current) => [{ id: `log-${Date.now()}`, petId: currentPet.id, type: logType, title: logTitle.trim(), detail: logDetail.trim() || `Scheduled care for ${currentPet.name}`, time: 'Now', date: 'Today', completed: false }, ...current]);
+  const createLog = async () => {
+    if (!logTitle.trim() || !currentPet) return;
+    const log = await addCareLog(db, { petId: currentPet.id, type: logType, title: logTitle.trim(), detail: logDetail.trim() || `Scheduled care for ${currentPet.name}`, time: 'Now', date: 'Today', completed: false });
+    setLogs((current) => [log, ...current]);
     setLogTitle('');
     setLogDetail('');
     setQuickLogOpen(false);
   };
 
   const sourceForPet = (pet: Pet) => avatarSources[pet.avatar];
+
+  if (loading || dataLoading || !currentPet) return <SkeletonScreen variant="dashboard" />;
 
   return (
     <View style={styles.screen}>

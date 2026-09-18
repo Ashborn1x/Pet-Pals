@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CalendarDays, Check, CheckCircle2, ChevronRight, PawPrint, Plus, Search, SlidersHorizontal, Weight, X } from 'lucide-react-native';
-import { INITIAL_LOGS, INITIAL_PETS } from '../../constants/initialPets';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { CalendarDays, Check, CheckCircle2, ChevronRight, PawPrint, Plus, Search, SlidersHorizontal, Trash2, Weight, X } from 'lucide-react-native';
+import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { deletePet, getCareLogs, getPets } from '../../database/petpalsDatabase';
+import { useSQLiteContext } from 'expo-sqlite';
 import { Pet } from '../../types/pet';
 
 type Props = { onOpenAddPet: () => void; onOpenPet?: (pet: Pet) => void };
@@ -14,18 +16,55 @@ const avatarSources = {
 };
 
 export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
+  const loading = useSkeletonLoading();
+  const db = useSQLiteContext();
+  const [petsData, setPetsData] = useState<Pet[]>([]);
+  const [logs, setLogs] = useState<import('../../types/pet').CareLog[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [selectedPetId, setSelectedPetId] = useState(INITIAL_PETS[0]?.id);
+  const [selectedPetId, setSelectedPetId] = useState('');
 
-  const pets = useMemo(() => INITIAL_PETS.filter((pet) => {
+  useEffect(() => {
+    Promise.all([getPets(db), getCareLogs(db)])
+      .then(([nextPets, nextLogs]) => {
+        setPetsData(nextPets);
+        setLogs(nextLogs);
+        setSelectedPetId((current) => current || nextPets[0]?.id || '');
+      })
+      .finally(() => setDataLoading(false));
+  }, [db]);
+
+  const pets = useMemo(() => petsData.filter((pet) => {
     const normalizedQuery = query.trim().toLowerCase();
     const matchesQuery = !normalizedQuery || [pet.name, pet.breed, pet.species].some((value) => value.toLowerCase().includes(normalizedQuery));
     const needsAttention = pet.name === 'Milo' || pet.breed.toLowerCase().includes('shih tzu');
     const matchesStatus = statusFilter === 'all' || (statusFilter === 'attention' ? needsAttention : !needsAttention);
     return matchesQuery && matchesStatus;
-  }), [query, statusFilter]);
+  }), [petsData, query, statusFilter]);
+
+  const confirmDelete = (pet: Pet) => {
+    Alert.alert(
+      `Remove ${pet.name}?`,
+      'This will permanently remove the pet and its care history from this device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await deletePet(db, pet.id);
+            setPetsData((current) => current.filter((item) => item.id !== pet.id));
+            setLogs((current) => current.filter((log) => log.petId !== pet.id));
+            setSelectedPetId((current) => current === pet.id ? '' : current);
+          },
+        },
+      ],
+    );
+  };
+
+  if (loading || dataLoading) return <SkeletonScreen variant="pets" />;
 
   return (
     <View style={styles.screen}>
@@ -60,7 +99,7 @@ export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
         </View>
 
         <View style={styles.petList}>
-          {pets.map((pet) => <PetCard key={pet.id} pet={pet} selected={pet.id === selectedPetId} onPress={() => { setSelectedPetId(pet.id); onOpenPet?.(pet); }} />)}
+          {pets.map((pet) => <PetCard key={pet.id} pet={pet} logs={logs} selected={pet.id === selectedPetId} onPress={() => { setSelectedPetId(pet.id); onOpenPet?.(pet); }} onDelete={() => confirmDelete(pet)} />)}
           {!pets.length && (
             <View style={styles.emptyState}>
               <PawPrint color="#A0B0A5" size={28} />
@@ -80,8 +119,8 @@ export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
   );
 }
 
-function PetCard({ pet, selected, onPress }: { pet: Pet; selected: boolean; onPress: () => void }) {
-  const logs = INITIAL_LOGS.filter((log) => log.petId === pet.id);
+function PetCard({ pet, logs: allLogs, selected, onPress, onDelete }: { pet: Pet; logs: import('../../types/pet').CareLog[]; selected: boolean; onPress: () => void; onDelete: () => void }) {
+  const logs = allLogs.filter((log) => log.petId === pet.id);
   const completedCount = logs.filter((log) => log.completed).length;
   const needsAttention = pet.name === 'Milo' || pet.breed.toLowerCase().includes('shih tzu');
 
@@ -103,6 +142,9 @@ function PetCard({ pet, selected, onPress }: { pet: Pet; selected: boolean; onPr
           <View style={styles.metric}><CheckCircle2 color="#467356" size={14} /><Text style={styles.doneText}>{completedCount}/{logs.length || 3} Done</Text></View>
         </View>
       </View>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${pet.name}`} onPress={(event) => { event.stopPropagation(); onDelete(); }} style={styles.deleteButton}>
+        <Trash2 color="#B56B5A" size={16} strokeWidth={2} />
+      </Pressable>
       <ChevronRight color={selected ? '#527763' : '#BAC2BB'} size={17} />
     </Pressable>
   );
@@ -129,6 +171,7 @@ const styles = StyleSheet.create({
   petList: { gap: 12, marginTop: 14 },
   petCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#EDE7DC', borderRadius: 26, borderWidth: 1, elevation: 2, flexDirection: 'row', minHeight: 112, padding: 14, shadowColor: '#28372D', shadowOpacity: 0.06, shadowRadius: 10 },
   petCardSelected: { borderColor: '#527763', borderWidth: 1.5, shadowOpacity: 0.12 },
+  deleteButton: { alignItems: 'center', backgroundColor: '#FBEAE5', borderRadius: 16, height: 32, justifyContent: 'center', marginLeft: 6, width: 32 },
   petImage: { backgroundColor: '#EFE9DF', borderColor: '#EAE4D7', borderRadius: 21, borderWidth: 1, height: 82, width: 82 },
   petDetails: { flex: 1, marginLeft: 13, minWidth: 0 },
   petTitleRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },

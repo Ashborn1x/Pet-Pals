@@ -2,9 +2,13 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Bell, ChevronRight, CircleHelp, LockKeyhole, Moon, ShieldCheck, UserRound } from 'lucide-react-native';
+import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
 
 export function SettingsScreen() {
+  const loading = useSkeletonLoading();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  if (loading) return <SkeletonScreen variant="settings" />;
 
   return (
     <View style={styles.screen}>

@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CalendarDays, ChevronLeft, ChevronRight, Circle, Clock, Plus, Syringe, Utensils } from 'lucide-react-native';
-import { INITIAL_LOGS, INITIAL_PETS } from '../../constants/initialPets';
+import { SkeletonScreen, useSkeletonLoading } from '../../components/Loading/Skeleton';
+import { getCareLogs, getPets } from '../../database/petpalsDatabase';
+import { useSQLiteContext } from 'expo-sqlite';
+import type { CareLog, Pet } from '../../types/pet';
 
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -9,7 +12,12 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 type Props = { onOpenAddPet?: () => void };
 
 export function CalendarScreen({ onOpenAddPet }: Props) {
+  const loading = useSkeletonLoading();
+  const db = useSQLiteContext();
   const today = new Date();
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [logs, setLogs] = useState<CareLog[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [month, setMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [companion, setCompanion] = useState('all');
@@ -17,7 +25,15 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
   const selectedDate = new Date(month.getFullYear(), month.getMonth(), selectedDay);
   const isCurrentMonth = month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth();
   const selectedLabel = selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-  const visibleLogs = INITIAL_LOGS.filter((log) => companion === 'all' || log.petId === companion);
+  const visibleLogs = logs.filter((log) => companion === 'all' || log.petId === companion);
+
+  useEffect(() => {
+    Promise.all([getPets(db), getCareLogs(db)])
+      .then(([nextPets, nextLogs]) => { setPets(nextPets); setLogs(nextLogs); })
+      .finally(() => setDataLoading(false));
+  }, [db]);
+
+  if (loading || dataLoading) return <SkeletonScreen variant="calendar" />;
 
   const changeMonth = (direction: number) => {
     setMonth((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
@@ -51,7 +67,7 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
           <View style={styles.filterHeader}><Text style={styles.filterTitle}>FILTER COMPANION</Text><Text style={styles.allMembers}>All Pack Members</Text></View>
           <View style={styles.companionRow}>
             <CompanionButton label="All" subtitle="2 Companions" active={companion === 'all'} onPress={() => setCompanion('all')} />
-            {INITIAL_PETS.map((pet) => <CompanionButton key={pet.id} label={pet.name} subtitle="5 Tasks" active={companion === pet.id} onPress={() => setCompanion(pet.id)} />)}
+            {pets.map((pet) => <CompanionButton key={pet.id} label={pet.name} subtitle={`${logs.filter((log) => log.petId === pet.id).length} Tasks`} active={companion === pet.id} onPress={() => setCompanion(pet.id)} />)}
           </View>
         </View>
 
