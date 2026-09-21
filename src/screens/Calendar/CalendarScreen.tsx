@@ -44,20 +44,20 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View><Text style={styles.title}>Care Calendar</Text><Text style={styles.subtitle}>Click any day to view & schedule pet routines</Text></View>
-          <Pressable onPress={() => { setMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDay(today.getDate()); }} style={styles.todayButton}><Text style={styles.todayText}>Today</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Go to today" onPress={() => { setMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDay(today.getDate()); }} style={styles.todayButton}><Text style={styles.todayText}>Today</Text></Pressable>
         </View>
 
         <View style={styles.calendarCard}>
           <View style={styles.monthRow}>
             <View style={styles.monthTitleRow}><Pressable onPress={() => changeMonth(-1)} style={styles.monthArrow}><ChevronLeft color="#557A63" size={15} /></Pressable><Text style={styles.monthTitle}>{MONTHS[month.getMonth()]} {month.getFullYear()}</Text><Pressable onPress={() => changeMonth(1)} style={styles.monthArrow}><ChevronRight color="#557A63" size={15} /></Pressable></View>
-            <View style={styles.viewToggle}><Text style={styles.viewActive}>Month</Text><Text style={styles.viewInactive}>Week</Text></View>
+            <View accessible accessibilityLabel="Month view" style={styles.viewToggle}><Text style={styles.viewActive}>Month view</Text></View>
           </View>
           <View style={styles.weekRow}>{WEEKDAYS.map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}</View>
           <View style={styles.grid}>{days.map((day, index) => {
             const selected = day.currentMonth && day.date === selectedDay;
             const isToday = isCurrentMonth && day.currentMonth && day.date === today.getDate();
             const hasEvents = day.currentMonth && [2, 6, 9, 12, 18, 20, 24].includes(day.date);
-            return <Pressable key={`${day.year}-${day.month}-${day.date}-${index}`} onPress={() => day.currentMonth && setSelectedDay(day.date)} style={[styles.dayCell, selected && styles.selectedDay, !day.currentMonth && styles.outsideDay]}><Text style={[styles.dayText, selected && styles.selectedDayText, !day.currentMonth && styles.outsideDayText]}>{day.date}</Text>{hasEvents && <View style={styles.dotRow}><View style={[styles.eventDot, styles.routineDot]} />{day.date % 3 === 0 && <View style={[styles.eventDot, styles.medsDot]} />}</View>}{isToday && !selected && <View style={styles.todayMarker} />}</Pressable>;
+            return <Pressable key={`${day.year}-${day.month}-${day.date}-${index}`} accessibilityRole="button" accessibilityLabel={`${MONTHS[day.month] ?? ''} ${day.date}${isToday ? ', today' : ''}${hasEvents ? ', has care events' : ''}`} accessibilityState={{ selected }} disabled={!day.currentMonth} onPress={() => setSelectedDay(day.date)} style={[styles.dayCell, selected && styles.selectedDay, !day.currentMonth && styles.outsideDay]}><Text style={[styles.dayText, selected && styles.selectedDayText, !day.currentMonth && styles.outsideDayText]}>{day.date}</Text>{hasEvents && <View style={styles.dotRow}><View style={[styles.eventDot, styles.routineDot]} />{day.date % 3 === 0 && <View style={[styles.eventDot, styles.medsDot]} />}</View>}{isToday && !selected && <View style={styles.todayMarker} />}</Pressable>;
           })}</View>
           <View style={styles.legend}><View style={styles.legendItem}><View style={[styles.legendDot, styles.routineDot]} /><Text style={styles.legendText}>Routine</Text></View><View style={styles.legendItem}><View style={[styles.legendDot, styles.medsDot]} /><Text style={styles.legendText}>Meds</Text></View><View style={styles.legendItem}><View style={[styles.legendDot, styles.vetDot]} /><Text style={styles.legendText}>Vet / Checkup</Text></View><Text style={styles.activeDates}>1 active dates</Text></View>
         </View>
@@ -71,7 +71,7 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
         </View>
 
         <View style={styles.scheduleCard}>
-          <View style={styles.scheduleHeader}><View><View style={styles.dateEyebrow}><CalendarDays color="#6B8B78" size={12} /><Text style={styles.dateEyebrowText}>TODAY</Text></View><Text style={styles.scheduleTitle}>{isCurrentMonth && selectedDay === today.getDate() ? 'Today' : selectedLabel}</Text></View><Pressable onPress={() => onOpenAddPet ? onOpenAddPet() : Alert.alert('Schedule Care', 'Choose a routine from the dashboard.')} style={styles.scheduleButton}><Plus color="#FFFFFF" size={14} /><Text style={styles.scheduleButtonText}>Schedule Care</Text></Pressable></View>
+          <View style={styles.scheduleHeader}><View><View style={styles.dateEyebrow}><CalendarDays color="#6B8B78" size={12} /><Text style={styles.dateEyebrowText}>SELECTED DAY</Text></View><Text style={styles.scheduleTitle}>{isCurrentMonth && selectedDay === today.getDate() ? 'Today' : selectedLabel}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Schedule care from dashboard" onPress={() => onOpenAddPet ? onOpenAddPet() : Alert.alert('Schedule Care', 'Use Quick Add Routine on the dashboard to schedule care.')} style={styles.scheduleButton}><Plus color="#FFFFFF" size={14} /><Text style={styles.scheduleButtonText}>Schedule Care</Text></Pressable></View>
           {visibleLogs.slice(0, 3).map((log) => <View key={log.id} style={styles.eventRow}><View style={styles.eventTime}><Clock color="#8A9B8F" size={12} /><Text style={styles.eventTimeText}>{log.time}</Text></View><View style={styles.eventIcon}>{log.type === 'meal' ? <Utensils color="#A87948" size={14} /> : log.type === 'meds' ? <Syringe color="#C46A55" size={14} /> : <Circle color="#557A63" size={9} fill="#557A63" />}</View><View style={styles.eventCopy}><Text style={styles.eventTitle}>{log.title}</Text><Text style={styles.eventDetail}>{log.detail}</Text></View><Text style={[styles.eventStatus, log.completed ? styles.doneStatus : styles.upcomingStatus]}>{log.completed ? 'Done' : 'Upcoming'}</Text></View>)}
         </View>
       </ScrollView>
@@ -80,7 +80,7 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
 }
 
 function CompanionButton({ label, subtitle, active, onPress }: { label: string; subtitle: string; active: boolean; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={[styles.companionButton, active && styles.activeCompanion]}><View style={[styles.companionAvatar, active && styles.activeAvatar]}>{label === 'All' ? <Text style={styles.allAvatarText}>All</Text> : <Text style={styles.petAvatarText}>{label[0]}</Text>}</View><View><Text style={[styles.companionName, active && styles.activeCompanionText]}>{label}</Text><Text style={[styles.companionSubtitle, active && styles.activeCompanionText]}>{subtitle}</Text></View></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={`Filter calendar by ${label}`} accessibilityState={{ selected: active }} onPress={onPress} style={[styles.companionButton, active && styles.activeCompanion]}><View style={[styles.companionAvatar, active && styles.activeAvatar]}>{label === 'All' ? <Text style={styles.allAvatarText}>All</Text> : <Text style={styles.petAvatarText}>{label[0]}</Text>}</View><View><Text style={[styles.companionName, active && styles.activeCompanionText]}>{label}</Text><Text style={[styles.companionSubtitle, active && styles.activeCompanionText]}>{subtitle}</Text></View></Pressable>;
 }
 
 function createCalendarDays(month: Date) {
@@ -114,9 +114,9 @@ const styles = StyleSheet.create({
   viewActive: { backgroundColor: '#FFFFFF', borderRadius: 8, color: '#355A43', fontSize: 8, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 5 },
   viewInactive: { color: '#8A9B8F', fontSize: 8, fontWeight: '700', paddingHorizontal: 7, paddingVertical: 5 },
   weekRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 5 },
-  weekday: { color: '#718276', fontSize: 8, fontWeight: '700', textAlign: 'center', width: '14.28%' },
+  weekday: { color: '#718276', fontSize: 10, fontWeight: '700', textAlign: 'center', width: '14.28%' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { alignItems: 'center', borderRadius: 10, height: 33, justifyContent: 'center', marginBottom: 3, position: 'relative', width: '14.28%' },
+  dayCell: { alignItems: 'center', borderRadius: 10, height: 40, justifyContent: 'center', marginBottom: 2, position: 'relative', width: '14.28%' },
   selectedDay: { backgroundColor: '#557A63' },
   outsideDay: { opacity: 0.38 },
   dayText: { color: '#1F2E23', fontSize: 10, fontWeight: '700' },

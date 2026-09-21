@@ -5,15 +5,10 @@ import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { deletePet, getCareLogs, getPets } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
 import { Pet } from '../../types/pet';
+import { getPetAvatarSource } from '../../constants/petAvatars';
 
 type Props = { onOpenAddPet: () => void; onOpenPet?: (pet: Pet) => void };
 type StatusFilter = 'all' | 'healthy' | 'attention';
-
-const avatarSources = {
-  dog: require('../../assets/images/cartoon_dog_avatar_1789624318697.jpg'),
-  cat: require('../../assets/images/cartoon_cat_avatar_1789624329620.jpg'),
-  jordan: require('../../assets/images/jordan_avatar_photo_1789667660941.jpg'),
-};
 
 export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
   const db = useSQLiteContext();
@@ -126,7 +121,7 @@ function PetCard({ pet, logs: allLogs, selected, onPress, onDelete }: { pet: Pet
   return (
     <View style={[styles.petCard, selected && styles.petCardSelected]}>
       <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={styles.petCardContent}>
-        <Image source={avatarSources[pet.avatar]} style={styles.petImage} />
+        <Image source={getPetAvatarSource(pet.species, pet.photoUri)} style={styles.petImage} />
         <View style={styles.petDetails}>
           <View style={styles.petTitleRow}>
             <Text numberOfLines={1} style={styles.petName}>{pet.name}</Text>

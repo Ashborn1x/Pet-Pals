@@ -41,7 +41,8 @@ export function SettingsScreen() {
 }
 
 function SettingRow({ icon, title, detail, trailing, onPress }: { icon: ReactNode; title: string; detail: string; trailing?: ReactNode; onPress?: () => void }) {
-  return <Pressable disabled={!onPress} onPress={onPress} style={styles.row}><View style={styles.rowIcon}>{icon}</View><View style={styles.rowCopy}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.rowDetail}>{detail}</Text></View>{trailing ?? <ChevronRight color="#A0AEA4" size={17} />}</Pressable>;
+  const content = <><View style={styles.rowIcon}>{icon}</View><View style={styles.rowCopy}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.rowDetail}>{detail}</Text></View>{trailing ?? (onPress ? <ChevronRight color="#A0AEA4" size={17} /> : null)}</>;
+  return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={styles.row}>{content}</Pressable> : <View accessible accessibilityLabel={`${title}. ${detail}`} style={styles.row}>{content}</View>;
 }
 
 const styles = StyleSheet.create({

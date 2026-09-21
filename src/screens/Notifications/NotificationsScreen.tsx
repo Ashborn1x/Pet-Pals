@@ -34,7 +34,7 @@ export function NotificationsScreen() {
         <View style={styles.list}>
           {INITIAL_NOTIFICATIONS.map((item) => {
             const read = readIds.includes(item.id);
-            return <Pressable key={item.id} onPress={() => markRead(item.id)} style={[styles.card, read && styles.readCard]}>
+            return <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`${item.title}. ${item.detail}`} accessibilityState={{ selected: read }} onPress={() => markRead(item.id)} style={[styles.card, read && styles.readCard]}>
               <View style={[styles.iconCircle, item.type === 'alert' ? styles.alertIcon : item.type === 'water' ? styles.waterIcon : styles.streakIcon]}>{item.type === 'alert' ? <CircleAlert color="#E36B5C" size={16} /> : item.type === 'water' ? <Droplets color="#6B9889" size={16} /> : <Flame color="#B17B40" size={16} />}</View>
               <View style={styles.copy}><View style={styles.titleRow}><Text style={styles.cardTitle}>{item.title}</Text><Text style={styles.time}>{item.time}</Text></View><Text style={styles.detail}>{item.detail}</Text></View>
               {!read && <View style={styles.unreadDot} />}

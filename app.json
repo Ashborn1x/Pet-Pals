@@ -25,12 +25,20 @@
     },
     "plugins": [
       [
-        "expo-router",
+      "expo-router",
         {
           "headers": {
             "Cross-Origin-Embedder-Policy": "credentialless",
             "Cross-Origin-Opener-Policy": "same-origin"
           }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow PetPals to use your photos for pet profiles.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "expo-status-bar",

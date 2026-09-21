@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -25,6 +26,8 @@ import {
   Weight,
 } from 'lucide-react-native';
 import { PetSpecies } from '../../types/pet';
+import { getPetAvatarSource } from '../../constants/petAvatars';
+import * as ImagePicker from 'expo-image-picker';
 import { addPetStyles as styles } from './styles';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -35,6 +38,7 @@ type Pet = {
   breed: string;
   weight: number;
   weightUnit: WeightUnit;
+  photoUri: string | null;
 };
 
 type Props = {
@@ -58,8 +62,6 @@ const BREEDS: Record<PetSpecies, string[]> = {
   other: ['Hamster', 'Guinea Pig', 'Ferret', 'Hedgehog', 'Other Companion'],
 };
 
-const previewImage = require('../../assets/images/clay_pet_care_simple_1789625871275.jpg');
-
 function SpeciesIcon({ species, color = '#627C6B', size = 20 }: { species: PetSpecies; color?: string; size?: number }) {
   const Icon = species === 'dog' ? Dog : species === 'cat' ? Cat : species === 'rabbit' ? Rabbit : species === 'bird' ? Bird : Sparkles;
   return <Icon color={color} size={size} strokeWidth={2} />;
@@ -71,6 +73,7 @@ export function AddPetScreen({ onBack, onSave }: Props) {
   const [breed, setBreed] = useState(BREEDS.dog[0]);
   const [weight, setWeight] = useState('24');
   const [weightUnit, setWeightUnit] = useState<WeightUnit>('lbs');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [typeOpen, setTypeOpen] = useState(false);
   const [breedOpen, setBreedOpen] = useState(false);
   const [error, setError] = useState('');
@@ -81,6 +84,23 @@ export function AddPetScreen({ onBack, onSave }: Props) {
     setSpecies(nextSpecies);
     setBreed(BREEDS[nextSpecies][0]);
     setTypeOpen(false);
+  };
+
+  const pickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Photo access needed', 'Allow photo access to choose a picture for your pet.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (!result.canceled) setPhotoUri(result.assets[0].uri);
   };
 
   const save = () => {
@@ -95,6 +115,7 @@ export function AddPetScreen({ onBack, onSave }: Props) {
       breed: breed.trim() || 'Companion Pet',
       weight: Number.parseFloat(weight) || 10,
       weightUnit,
+      photoUri,
     });
   };
 
@@ -118,11 +139,11 @@ export function AddPetScreen({ onBack, onSave }: Props) {
         </View>
 
         <View accessible accessibilityLabel="Pet photo section" style={styles.photoCard}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Add photo" onPress={() => {}} style={styles.addPhotoButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel={photoUri ? 'Change pet photo' : 'Add pet photo'} onPress={pickPhoto} style={styles.defaultIconBadge}>
             <Camera color="#557A63" size={25} strokeWidth={1.8} />
-            <Text style={styles.addPhotoText}>Add Photo</Text>
+            <Text style={styles.addPhotoText}>{photoUri ? 'Change Photo' : 'Add Photo'}</Text>
           </Pressable>
-          <Image accessibilityLabel="Pet preview" source={previewImage} style={styles.previewImage} />
+          <Image accessibilityLabel={photoUri ? 'Selected pet photo' : `${currentSpecies.label} default preview`} source={photoUri ? { uri: photoUri } : getPetAvatarSource(species)} style={styles.previewImage} />
         </View>
 
         <View style={styles.fieldsCard}>

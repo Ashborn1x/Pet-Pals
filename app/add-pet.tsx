@@ -11,7 +11,7 @@ export default function AddPetRoute() {
   const router = useRouter();
   const db = useSQLiteContext();
 
-  const handleSave = async (pet: { name: string; species: PetSpecies; breed: string; weight: number; weightUnit: 'lbs' | 'kg' }) => {
+  const handleSave = async (pet: { name: string; species: PetSpecies; breed: string; weight: number; weightUnit: 'lbs' | 'kg'; photoUri: string | null }) => {
     try {
       await addPet(db, pet);
       await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');

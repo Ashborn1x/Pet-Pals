@@ -4,7 +4,7 @@ import type { CareLog, CareType, Pet, PetSpecies } from '../types/pet';
 
 type PetRow = {
   id: string; name: string; species: PetSpecies; breed: string; age_years: number;
-  age_months: number; weight: number; weight_unit: 'lbs' | 'kg'; avatar: Pet['avatar'];
+  age_months: number; weight: number; weight_unit: 'lbs' | 'kg'; photo_uri: string | null; avatar: Pet['avatar'];
 };
 
 type CareLogRow = {
@@ -40,6 +40,11 @@ export async function initializeDatabase(db: SQLiteDatabase) {
     );
     CREATE INDEX IF NOT EXISTS care_logs_pet_id_idx ON care_logs (pet_id);
   `);
+  try {
+    await db.execAsync('ALTER TABLE pets ADD COLUMN photo_uri TEXT');
+  } catch {
+    // Existing databases already have the column.
+  }
 
   const existing = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM pets');
   if ((existing?.count ?? 0) > 0) return;
@@ -71,7 +76,7 @@ export async function addPet(db: SQLiteDatabase, input: Omit<Pet, 'id' | 'ageYea
     id: `pet-${Date.now()}`,
     ageYears: 0,
     ageMonths: 0,
-    avatar: input.species === 'cat' ? 'cat' : 'dog',
+    avatar: input.species,
   };
   await insertPet(db, pet);
   return pet;
@@ -96,9 +101,9 @@ export async function addCareLog(db: SQLiteDatabase, input: Omit<CareLog, 'id'>)
 
 async function insertPet(db: SQLiteDatabase, pet: Pet) {
   await db.runAsync(
-    `INSERT OR IGNORE INTO pets (id, name, species, breed, age_years, age_months, weight, weight_unit, avatar)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    pet.id, pet.name, pet.species, pet.breed, pet.ageYears, pet.ageMonths, pet.weight, pet.weightUnit, pet.avatar,
+    `INSERT OR IGNORE INTO pets (id, name, species, breed, age_years, age_months, weight, weight_unit, photo_uri, avatar)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    pet.id, pet.name, pet.species, pet.breed, pet.ageYears, pet.ageMonths, pet.weight, pet.weightUnit, pet.photoUri, pet.avatar,
   );
 }
 
@@ -111,7 +116,7 @@ async function insertCareLog(db: SQLiteDatabase, log: CareLog) {
 }
 
 function toPet(row: PetRow): Pet {
-  return { id: row.id, name: row.name, species: row.species, breed: row.breed, ageYears: row.age_years, ageMonths: row.age_months, weight: row.weight, weightUnit: row.weight_unit, avatar: row.avatar };
+  return { id: row.id, name: row.name, species: row.species, breed: row.breed, ageYears: row.age_years, ageMonths: row.age_months, weight: row.weight, weightUnit: row.weight_unit, photoUri: row.photo_uri ?? null, avatar: row.avatar };
 }
 
 function toCareLog(row: CareLogRow): CareLog {

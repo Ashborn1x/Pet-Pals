@@ -11,7 +11,9 @@ export type Pet = {
   ageMonths: number;
   weight: number;
   weightUnit: 'lbs' | 'kg';
-  avatar: 'dog' | 'cat' | 'jordan';
+  photoUri: string | null;
+  /** Kept for database compatibility; pet screens derive the default image from species. */
+  avatar: PetSpecies | 'jordan';
 };
 
 export type CareLog = {

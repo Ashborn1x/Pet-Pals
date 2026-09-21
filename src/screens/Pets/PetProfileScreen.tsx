@@ -1,20 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Activity, ArrowLeft, CalendarDays, Check, CheckCircle2, Circle, Droplets, Heart, Pencil, Phone, Plus, ShieldCheck, Utensils, Weight } from 'lucide-react-native';
+import { Activity, ArrowLeft, CalendarDays, Check, CheckCircle2, Circle, Droplets, Heart, Phone, Plus, ShieldCheck, Utensils, Weight } from 'lucide-react-native';
 import { Defs, LinearGradient, Path, Stop, Svg, Circle as SvgCircle } from 'react-native-svg';
 import { CareLog, Pet } from '../../types/pet';
 import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { getCareLogs, getPet, updateCareLog } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
+import { getPetAvatarSource } from '../../constants/petAvatars';
 
 type Props = { petId?: string; onBack: () => void };
 type ProfileTab = 'health' | 'diet' | 'activity';
-
-const avatarSources = {
-  dog: require('../../assets/images/cartoon_dog_avatar_1789624318697.jpg'),
-  cat: require('../../assets/images/cartoon_cat_avatar_1789624329620.jpg'),
-  jordan: require('../../assets/images/jordan_avatar_photo_1789667660941.jpg'),
-};
 
 export function PetProfileScreen({ petId, onBack }: Props) {
   const db = useSQLiteContext();
@@ -44,10 +39,9 @@ export function PetProfileScreen({ petId, onBack }: Props) {
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
-          <Image source={avatarSources[pet.avatar]} style={styles.heroImage} />
+          <Image source={getPetAvatarSource(pet.species, pet.photoUri)} style={styles.heroImage} />
           <View style={styles.heroShade} />
           <Pressable accessibilityRole="button" accessibilityLabel="Back to pets" onPress={onBack} style={styles.heroButton}><ArrowLeft color="#1F2E23" size={20} strokeWidth={2.2} /></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Edit pet details" onPress={() => Alert.alert('Edit pet', 'Pet editing will be available soon.')} style={[styles.heroButton, styles.editButton]}><Pencil color="#1F2E23" size={17} strokeWidth={2.1} /></Pressable>
         </View>
 
         <View style={styles.profileCard}>

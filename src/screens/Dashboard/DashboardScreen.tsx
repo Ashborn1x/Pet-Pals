@@ -18,14 +18,11 @@ import { addCareLog, getCareLogs, getPets, updateCareLog } from '../../database/
 import { useSQLiteContext } from 'expo-sqlite';
 import { CareLog, CareType, Pet } from '../../types/pet';
 import { dashboardStyles as styles } from './styles';
+import { getPetAvatarSource } from '../../constants/petAvatars';
 
 type Props = { onOpenAddPet: () => void; onReturnToWelcome: () => void };
 
-const avatarSources = {
-  dog: require('../../assets/images/cartoon_dog_avatar_1789624318697.jpg'),
-  cat: require('../../assets/images/cartoon_cat_avatar_1789624329620.jpg'),
-  jordan: require('../../assets/images/jordan_avatar_photo_1789667660941.jpg'),
-};
+const profileAvatar = require('../../assets/images/jordan_avatar_photo_1789667660941.jpg');
 
 function CareIcon({ type, color = '#557A63', size = 15 }: { type: CareType; color?: string; size?: number }) {
   const Icon = type === 'meal' ? Utensils : type === 'water' ? Droplets : type === 'walk' ? Footprints : type === 'meds' ? Pill : type === 'weight' ? Weight : Heart;
@@ -84,7 +81,7 @@ export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
     setQuickLogOpen(false);
   };
 
-  const sourceForPet = (pet: Pet) => avatarSources[pet.avatar];
+  const sourceForPet = (pet: Pet) => getPetAvatarSource(pet.species, pet.photoUri);
 
   if (dataLoading || !currentPet) return <SkeletonScreen variant="dashboard" />;
 
@@ -97,7 +94,7 @@ export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
             <Text style={styles.greetingSubtext}>It&apos;s a perfect day for a walk.</Text>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={onReturnToWelcome} style={styles.profileButton}>
-            <Image source={avatarSources.jordan} style={styles.profileImage} />
+            <Image source={profileAvatar} style={styles.profileImage} />
           </Pressable>
         </View>
 
