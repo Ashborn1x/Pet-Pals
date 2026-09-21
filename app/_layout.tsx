@@ -5,6 +5,7 @@ import { NavigationBar } from 'expo-navigation-bar';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSharedValue } from 'react-native-reanimated';
 import { SQLiteProvider } from 'expo-sqlite';
@@ -12,8 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeDatabase } from '../src/database/petpalsDatabase';
 import { ONBOARDING_COMPLETED_KEY } from '../src/constants/storage';
 import { UniversalNav } from '../src/components/Navigation/UniversalNav';
-import { MAIN_TAB_ROUTES, MainTabCarousel } from '../src/components/Navigation/MainTabCarousel';
-import { useEffect, useState } from 'react';
+import { MAIN_TAB_ROUTES, MainTabCarousel, type MainTabCarouselRef } from '../src/components/Navigation/MainTabCarousel';
 
 export default function Layout() {
   return (
@@ -31,6 +31,7 @@ function AppContent() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const tabProgress = useSharedValue(0);
+  const carouselRef = useRef<MainTabCarouselRef>(null);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   useEffect(() => {
@@ -58,16 +59,21 @@ function AppContent() {
           </Stack>
           {showMainCarousel && (
             <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-              <MainTabCarousel progress={tabProgress} />
+              <MainTabCarousel ref={carouselRef} progress={tabProgress} />
             </View>
           )}
         </View>
         {showNavigation && (
           <View pointerEvents="box-none" style={{ bottom: insets.bottom + 8, elevation: 1000, height: 92, justifyContent: 'flex-end', left: 0, position: 'absolute', right: 0, zIndex: 1000 }}>
-            <UniversalNav progress={tabProgress} />
+            <UniversalNav
+              progress={tabProgress}
+              onTabPress={(tab) => carouselRef.current?.navigateToIndex(NAV_TAB_INDEX[tab])}
+            />
           </View>
         )}
       </View>
     </>
   );
 }
+
+const NAV_TAB_INDEX = { home: 0, pets: 1, calendar: 2, notifications: 3, settings: 4 } as const;

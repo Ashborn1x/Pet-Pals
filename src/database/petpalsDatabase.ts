@@ -12,6 +12,34 @@ type CareLogRow = {
   time: string; date: string; completed: number;
 };
 
+type DatabaseCache = {
+  pets?: Pet[];
+  petsPromise?: Promise<Pet[]>;
+  logs?: CareLog[];
+  logsPromise?: Promise<CareLog[]>;
+};
+
+const databaseCaches = new WeakMap<SQLiteDatabase, DatabaseCache>();
+
+function getCache(db: SQLiteDatabase) {
+  let cache = databaseCaches.get(db);
+  if (!cache) {
+    cache = {};
+    databaseCaches.set(db, cache);
+  }
+  return cache;
+}
+
+function invalidatePets(db: SQLiteDatabase) {
+  const cache = getCache(db);
+  cache.pets = undefined;
+}
+
+function invalidateLogs(db: SQLiteDatabase) {
+  const cache = getCache(db);
+  cache.logs = undefined;
+}
+
 export async function initializeDatabase(db: SQLiteDatabase) {
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
@@ -56,18 +84,44 @@ export async function initializeDatabase(db: SQLiteDatabase) {
 }
 
 export async function getPets(db: SQLiteDatabase): Promise<Pet[]> {
-  const rows = await db.getAllAsync<PetRow>('SELECT * FROM pets ORDER BY name COLLATE NOCASE');
-  return rows.map(toPet);
+  const cache = getCache(db);
+  if (cache.pets) return cache.pets;
+  if (cache.petsPromise) return cache.petsPromise;
+
+  const request = db.getAllAsync<PetRow>('SELECT * FROM pets ORDER BY name COLLATE NOCASE')
+    .then((rows) => rows.map(toPet))
+    .then((pets) => {
+      cache.pets = pets;
+      return pets;
+    })
+    .finally(() => { cache.petsPromise = undefined; });
+  cache.petsPromise = request;
+  return request;
 }
 
 export async function getPet(db: SQLiteDatabase, id: string) {
+  const cachedPets = getCache(db).pets;
+  const cachedPet = cachedPets?.find((pet) => pet.id === id);
+  if (cachedPet) return cachedPet;
+
   const row = await db.getFirstAsync<PetRow>('SELECT * FROM pets WHERE id = ?', id);
   return row ? toPet(row) : undefined;
 }
 
 export async function getCareLogs(db: SQLiteDatabase): Promise<CareLog[]> {
-  const rows = await db.getAllAsync<CareLogRow>('SELECT * FROM care_logs ORDER BY rowid DESC');
-  return rows.map(toCareLog);
+  const cache = getCache(db);
+  if (cache.logs) return cache.logs;
+  if (cache.logsPromise) return cache.logsPromise;
+
+  const request = db.getAllAsync<CareLogRow>('SELECT * FROM care_logs ORDER BY rowid DESC')
+    .then((rows) => rows.map(toCareLog))
+    .then((logs) => {
+      cache.logs = logs;
+      return logs;
+    })
+    .finally(() => { cache.logsPromise = undefined; });
+  cache.logsPromise = request;
+  return request;
 }
 
 export async function addPet(db: SQLiteDatabase, input: Omit<Pet, 'id' | 'ageYears' | 'ageMonths' | 'avatar'>) {
@@ -79,6 +133,7 @@ export async function addPet(db: SQLiteDatabase, input: Omit<Pet, 'id' | 'ageYea
     avatar: input.species,
   };
   await insertPet(db, pet);
+  invalidatePets(db);
   return pet;
 }
 
@@ -87,15 +142,19 @@ export async function deletePet(db: SQLiteDatabase, petId: string) {
     await db.runAsync('DELETE FROM care_logs WHERE pet_id = ?', petId);
     await db.runAsync('DELETE FROM pets WHERE id = ?', petId);
   });
+  invalidatePets(db);
+  invalidateLogs(db);
 }
 
 export async function updateCareLog(db: SQLiteDatabase, id: string, completed: boolean) {
   await db.runAsync('UPDATE care_logs SET completed = ? WHERE id = ?', completed ? 1 : 0, id);
+  invalidateLogs(db);
 }
 
 export async function addCareLog(db: SQLiteDatabase, input: Omit<CareLog, 'id'>) {
   const log: CareLog = { ...input, id: `log-${Date.now()}` };
   await insertCareLog(db, log);
+  invalidateLogs(db);
   return log;
 }
 

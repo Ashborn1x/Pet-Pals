@@ -25,10 +25,6 @@ export function WelcomeScreen({ onAddPet, onSkip }: WelcomeScreenProps) {
           slide={onboarding.activeSlide}
           slideOpacity={onboarding.animation.slideOpacity}
           slideScale={onboarding.animation.slideScale}
-          onPrevious={onboarding.goToPrevious}
-          onNext={onboarding.goToNext}
-          showPrevious={!onboarding.isFirstSlide}
-          showNext={!onboarding.isLastSlide}
         />
         <WelcomeContent
           slideIndex={onboarding.currentSlide}

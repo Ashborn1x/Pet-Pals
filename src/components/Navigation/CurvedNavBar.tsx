@@ -7,6 +7,7 @@ export type NavTabId = 'home' | 'pets' | 'calendar' | 'notifications' | 'setting
 
 type Props = {
   activeTab: NavTabId;
+  onTabPressIn: (tab: NavTabId) => void;
   onTabChange: (tab: NavTabId) => void;
   progress: SharedValue<number>;
 };
@@ -25,7 +26,7 @@ const HORIZONTAL_INSET = 24;
 const BUBBLE_RADIUS = 23;
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-export function CurvedNavBar({ activeTab, onTabChange, progress }: Props) {
+export function CurvedNavBar({ activeTab, onTabPressIn, onTabChange, progress }: Props) {
   const { width: screenWidth } = useWindowDimensions();
   const barWidth = Math.min(Math.max(screenWidth - 16, 280), 360);
   const tabWidth = (barWidth - HORIZONTAL_INSET * 2) / NAV_TABS.length;
@@ -67,6 +68,7 @@ export function CurvedNavBar({ activeTab, onTabChange, progress }: Props) {
                 accessibilityRole="tab"
                 accessibilityLabel={tab.label}
                 accessibilityState={{ selected }}
+                onPressIn={() => onTabPressIn(tab.id)}
                 onPress={() => onTabChange(tab.id)}
                 style={styles.tabButton}
               >

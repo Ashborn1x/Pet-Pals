@@ -5,10 +5,6 @@ export const onboardingStyles = StyleSheet.create({
   container: { backgroundColor: '#FFF5EA', flex: 1, overflow: 'hidden' },
   hero: { flex: 7, flexBasis: 0, flexShrink: 1, minHeight: 0, overflow: 'hidden', position: 'relative' },
   heroImage: { bottom: 0, height: '100%', left: 0, position: 'absolute', right: 0, width: '100%' },
-  chevronButton: { alignItems: 'center', backgroundColor: '#FFFFFFB3', borderRadius: 18, height: 32, justifyContent: 'center', position: 'absolute', top: '50%', width: 32 },
-  leftChevron: { left: 12 },
-  rightChevron: { right: 12 },
-  chevron: { color: '#4A5D50', fontSize: 28, fontWeight: '300', lineHeight: 28, marginTop: -3 },
   contentSheet: { alignItems: 'center', backgroundColor: '#FFF5EA', borderColor: '#FFFFFFE6', borderTopLeftRadius: 38, borderTopRightRadius: 38, borderTopWidth: 1, elevation: 4, flex: 3, flexBasis: 0, flexShrink: 1, justifyContent: 'flex-start', marginTop: -24, minHeight: 0, paddingBottom: 30, paddingHorizontal: 24, paddingTop: 28, shadowColor: '#32281E', shadowOffset: { height: -8, width: 0 }, shadowOpacity: 0.08, shadowRadius: 18, zIndex: 2 },
   textHolder: { alignItems: 'center', height: 132, justifyContent: 'center', marginBottom: 16, maxWidth: 290, width: '100%' },
   title: { color: '#1A221D', fontSize: 27, fontWeight: '800', lineHeight: 32, marginBottom: 10, textAlign: 'center' },
@@ -24,6 +20,5 @@ export const onboardingStyles = StyleSheet.create({
   skipButton: { alignItems: 'center', height: 34, justifyContent: 'center', marginTop: 8, width: '100%' },
   skipButtonText: { color: '#687C70', fontSize: 13, fontWeight: '600', includeFontPadding: false, lineHeight: 18, textAlign: 'center' },
   skipButtonPlaceholder: { height: 34, marginTop: 8, width: '100%' },
-  pressed: { opacity: 0.6 },
   buttonPressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
 });
