@@ -139,11 +139,12 @@ export function AddPetScreen({ onBack, onSave }: Props) {
         </View>
 
         <View accessible accessibilityLabel="Pet photo section" style={styles.photoCard}>
-          <Pressable accessibilityRole="button" accessibilityLabel={photoUri ? 'Change pet photo' : 'Add pet photo'} onPress={pickPhoto} style={styles.defaultIconBadge}>
-            <Camera color="#557A63" size={25} strokeWidth={1.8} />
-            <Text style={styles.addPhotoText}>{photoUri ? 'Change Photo' : 'Add Photo'}</Text>
-          </Pressable>
           <Image accessibilityLabel={photoUri ? 'Selected pet photo' : `${currentSpecies.label} default preview`} source={photoUri ? { uri: photoUri } : getPetAvatarSource(species)} style={styles.previewImage} />
+          <Pressable accessibilityRole="button" accessibilityLabel={photoUri ? 'Change pet photo' : 'Add pet photo'} onPress={pickPhoto} style={styles.photoButton}>
+            <Camera color="#557A63" size={21} strokeWidth={1.9} />
+            <Text style={styles.addPhotoText}>{photoUri ? 'Change & Crop Photo' : 'Add & Crop Photo'}</Text>
+          </Pressable>
+          <Text style={styles.photoHint}>Choose a photo and crop it to a square</Text>
         </View>
 
         <View style={styles.fieldsCard}>
