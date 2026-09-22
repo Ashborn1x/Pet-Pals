@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { INITIAL_LOGS, INITIAL_PETS } from '../constants/initialPets';
-import type { CareLog, CareType, Pet, PetSpecies } from '../types/pet';
+import type { CareLog, CareType, Pet, PetPhoto, PetSpecies } from '../types/pet';
 
 type PetRow = {
   id: string; name: string; species: PetSpecies; breed: string; age_years: number;
@@ -12,11 +12,15 @@ type CareLogRow = {
   time: string; date: string; completed: number;
 };
 
+type PetPhotoRow = { id: string; pet_id: string; uri: string };
+
 type DatabaseCache = {
   pets?: Pet[];
   petsPromise?: Promise<Pet[]>;
   logs?: CareLog[];
   logsPromise?: Promise<CareLog[]>;
+  photos?: PetPhoto[];
+  photosPromise?: Promise<PetPhoto[]>;
 };
 
 const databaseCaches = new WeakMap<SQLiteDatabase, DatabaseCache>();
@@ -67,6 +71,13 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       FOREIGN KEY (pet_id) REFERENCES pets (id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS care_logs_pet_id_idx ON care_logs (pet_id);
+    CREATE TABLE IF NOT EXISTS pet_photos (
+      id TEXT PRIMARY KEY NOT NULL,
+      pet_id TEXT NOT NULL,
+      uri TEXT NOT NULL,
+      FOREIGN KEY (pet_id) REFERENCES pets (id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS pet_photos_pet_id_idx ON pet_photos (pet_id);
   `);
   try {
     await db.execAsync('ALTER TABLE pets ADD COLUMN photo_uri TEXT');
@@ -124,6 +135,19 @@ export async function getCareLogs(db: SQLiteDatabase): Promise<CareLog[]> {
   return request;
 }
 
+export async function getPetPhotos(db: SQLiteDatabase, petId: string): Promise<PetPhoto[]> {
+  const cache = getCache(db);
+  if (cache.photos) return cache.photos.filter((photo) => photo.petId === petId);
+  if (cache.photosPromise) return (await cache.photosPromise).filter((photo) => photo.petId === petId);
+
+  const request = db.getAllAsync<PetPhotoRow>('SELECT * FROM pet_photos ORDER BY rowid DESC')
+    .then((rows) => rows.map((row) => ({ id: row.id, petId: row.pet_id, uri: row.uri })))
+    .then((photos) => { cache.photos = photos; return photos; })
+    .finally(() => { cache.photosPromise = undefined; });
+  cache.photosPromise = request;
+  return (await request).filter((photo) => photo.petId === petId);
+}
+
 export async function addPet(db: SQLiteDatabase, input: Omit<Pet, 'id' | 'ageYears' | 'ageMonths' | 'avatar'>) {
   const pet: Pet = {
     ...input,
@@ -137,17 +161,55 @@ export async function addPet(db: SQLiteDatabase, input: Omit<Pet, 'id' | 'ageYea
   return pet;
 }
 
+export async function updatePet(db: SQLiteDatabase, petId: string, input: Omit<Pet, 'id' | 'avatar'>) {
+  const pet: Pet = { ...input, id: petId, avatar: input.species };
+  await db.runAsync(
+    `UPDATE pets
+     SET name = ?, species = ?, breed = ?, age_years = ?, age_months = ?, weight = ?, weight_unit = ?, photo_uri = ?, avatar = ?
+     WHERE id = ?`,
+    pet.name, pet.species, pet.breed, pet.ageYears, pet.ageMonths, pet.weight, pet.weightUnit, pet.photoUri, pet.avatar, pet.id,
+  );
+  invalidatePets(db);
+  return pet;
+}
+
 export async function deletePet(db: SQLiteDatabase, petId: string) {
   await db.withTransactionAsync(async () => {
     await db.runAsync('DELETE FROM care_logs WHERE pet_id = ?', petId);
+    await db.runAsync('DELETE FROM pet_photos WHERE pet_id = ?', petId);
     await db.runAsync('DELETE FROM pets WHERE id = ?', petId);
   });
   invalidatePets(db);
   invalidateLogs(db);
+  const cache = getCache(db);
+  cache.photos = undefined;
+}
+
+export async function addPetPhoto(db: SQLiteDatabase, petId: string, uri: string) {
+  const photo: PetPhoto = { id: `photo-${Date.now()}`, petId, uri };
+  await db.runAsync('INSERT INTO pet_photos (id, pet_id, uri) VALUES (?, ?, ?)', photo.id, photo.petId, photo.uri);
+  const cache = getCache(db);
+  cache.photos = undefined;
+  return photo;
+}
+
+export async function deletePetPhoto(db: SQLiteDatabase, photoId: string) {
+  await db.runAsync('DELETE FROM pet_photos WHERE id = ?', photoId);
+  getCache(db).photos = undefined;
 }
 
 export async function updateCareLog(db: SQLiteDatabase, id: string, completed: boolean) {
   await db.runAsync('UPDATE care_logs SET completed = ? WHERE id = ?', completed ? 1 : 0, id);
+  invalidateLogs(db);
+}
+
+export async function updateCareLogDetails(db: SQLiteDatabase, id: string, title: string, detail: string, time: string, date: string) {
+  await db.runAsync('UPDATE care_logs SET title = ?, detail = ?, time = ?, date = ? WHERE id = ?', title, detail, time, date, id);
+  invalidateLogs(db);
+}
+
+export async function deleteCareLog(db: SQLiteDatabase, id: string) {
+  await db.runAsync('DELETE FROM care_logs WHERE id = ?', id);
   invalidateLogs(db);
 }
 

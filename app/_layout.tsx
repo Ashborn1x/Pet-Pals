@@ -50,6 +50,7 @@ function AppContent() {
           <Stack>
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="add-pet" options={{ headerShown: false }} />
+              <Stack.Screen name="edit-pet" options={{ headerShown: false }} />
               <Stack.Screen name="dashboard" options={{ headerShown: false }} />
               <Stack.Screen name="pets" options={{ headerShown: false }} />
               <Stack.Screen name="pet-profile" options={{ headerShown: false }} />

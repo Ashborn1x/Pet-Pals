@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { CalendarDays, CheckCircle2, ChevronRight, PawPrint, Plus, Weight } from 'lucide-react-native';
+import { CalendarDays, CheckCircle2, ChevronRight, PawPrint, Plus, Trash2, Weight } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
 import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { deletePet, getPets } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -15,7 +16,8 @@ export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedPetId, setSelectedPetId] = useState('');
 
-  useEffect(() => {
+  const loadPets = useCallback(() => {
+    setDataLoading(true);
     getPets(db)
       .then((nextPets) => {
         setPetsData(nextPets);
@@ -23,6 +25,8 @@ export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
       })
       .finally(() => setDataLoading(false));
   }, [db]);
+
+  useFocusEffect(loadPets);
 
   const pets = petsData;
 
@@ -97,6 +101,7 @@ function PetCard({ pet, primary, selected, onPress, onDelete }: { pet: Pet; prim
           <View style={styles.cardActions}>
             <View style={styles.actionPill}><CalendarDays color="#4C8060" size={11} /><Text style={styles.actionText}>Calendar</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel={`${pet.name} health and notes`} onPress={onPress} style={[styles.actionPill, styles.notesPill]}><CheckCircle2 color="#7C847B" size={11} /><Text style={styles.notesText}>Health &amp; Notes</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${pet.name}`} onPress={onDelete} style={styles.deleteButton}><Trash2 color="#B9553E" size={12} /></Pressable>
           </View>
         </View>
       </Pressable>
@@ -132,6 +137,7 @@ const styles = StyleSheet.create({
   actionText: { color: '#3D7050', fontSize: 9, fontWeight: '700', marginLeft: 3 },
   notesPill: { backgroundColor: '#F1ECE3' },
   notesText: { color: '#6B716A', fontSize: 9, fontWeight: '700', marginLeft: 3 },
+  deleteButton: { alignItems: 'center', borderColor: '#F0D8D0', borderRadius: 10, borderWidth: 1, height: 26, justifyContent: 'center', marginLeft: 'auto', width: 26 },
   emptyState: { alignItems: 'center', backgroundColor: '#FFFDF8', borderColor: '#EDE8DE', borderRadius: 20, borderWidth: 1, padding: 30 },
   emptyTitle: { color: '#425548', fontSize: 14, fontWeight: '700', marginTop: 8 },
   emptyText: { color: '#718276', fontSize: 12, marginTop: 4 },

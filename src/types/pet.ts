@@ -26,3 +26,9 @@ export type CareLog = {
   date: string;
   completed: boolean;
 };
+
+export type PetPhoto = {
+  id: string;
+  petId: string;
+  uri: string;
+};

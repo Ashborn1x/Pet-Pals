@@ -25,25 +25,18 @@ import {
   Sparkles,
   Weight,
 } from 'lucide-react-native';
-import { PetSpecies } from '../../types/pet';
+import { Pet, PetSpecies } from '../../types/pet';
 import { getPetAvatarSource } from '../../constants/petAvatars';
 import * as ImagePicker from 'expo-image-picker';
 import { addPetStyles as styles } from './styles';
 
 type WeightUnit = 'lbs' | 'kg';
 
-type Pet = {
-  name: string;
-  species: PetSpecies;
-  breed: string;
-  weight: number;
-  weightUnit: WeightUnit;
-  photoUri: string | null;
-};
-
 type Props = {
   onBack: () => void;
   onSave: (pet: Pet) => void;
+  initialPet?: Pet;
+  mode?: 'create' | 'edit';
 };
 
 const SPECIES: { key: PetSpecies; label: string }[] = [
@@ -67,13 +60,13 @@ function SpeciesIcon({ species, color = '#627C6B', size = 20 }: { species: PetSp
   return <Icon color={color} size={size} strokeWidth={2} />;
 }
 
-export function AddPetScreen({ onBack, onSave }: Props) {
-  const [name, setName] = useState('');
-  const [species, setSpecies] = useState<PetSpecies>('dog');
-  const [breed, setBreed] = useState(BREEDS.dog[0]);
-  const [weight, setWeight] = useState('24');
-  const [weightUnit, setWeightUnit] = useState<WeightUnit>('lbs');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Props) {
+  const [name, setName] = useState(initialPet?.name ?? '');
+  const [species, setSpecies] = useState<PetSpecies>(initialPet?.species ?? 'dog');
+  const [breed, setBreed] = useState(initialPet?.breed ?? BREEDS.dog[0]);
+  const [weight, setWeight] = useState(String(initialPet?.weight ?? 24));
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(initialPet?.weightUnit ?? 'lbs');
+  const [photoUri, setPhotoUri] = useState<string | null>(initialPet?.photoUri ?? null);
   const [typeOpen, setTypeOpen] = useState(false);
   const [breedOpen, setBreedOpen] = useState(false);
   const [error, setError] = useState('');
@@ -110,12 +103,16 @@ export function AddPetScreen({ onBack, onSave }: Props) {
     }
 
     onSave({
+      id: initialPet?.id ?? '',
       name: name.trim(),
       species,
       breed: breed.trim() || 'Companion Pet',
+      ageYears: initialPet?.ageYears ?? 0,
+      ageMonths: initialPet?.ageMonths ?? 0,
       weight: Number.parseFloat(weight) || 10,
       weightUnit,
       photoUri,
+      avatar: species,
     });
   };
 
@@ -134,7 +131,7 @@ export function AddPetScreen({ onBack, onSave }: Props) {
         </Pressable>
 
         <View style={styles.heading}>
-          <Text style={styles.title}>Add a Pet</Text>
+          <Text style={styles.title}>{mode === 'edit' ? 'Edit Pet' : 'Add a Pet'}</Text>
           <Text style={styles.subtitle}>Tell us a little about your pet.{`\n`}We’ll take care of the rest.</Text>
         </View>
 
@@ -238,7 +235,7 @@ export function AddPetScreen({ onBack, onSave }: Props) {
         {!!error && <Text style={styles.error}>{error}</Text>}
 
         <View style={styles.bottomActions}>
-          <Pressable accessibilityRole="button" onPress={save} style={styles.saveButton}><Text style={styles.saveText}>Save</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={save} style={styles.saveButton}><Text style={styles.saveText}>{mode === 'edit' ? 'Save Changes' : 'Save'}</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={onBack} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable>
           <View style={styles.homeIndicator} />
         </View>

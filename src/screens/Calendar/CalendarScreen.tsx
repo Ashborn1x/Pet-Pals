@@ -25,6 +25,7 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
   const isCurrentMonth = month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth();
   const selectedLabel = selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   const visibleLogs = logs.filter((log) => companion === 'all' || log.petId === companion);
+  const activeDateCount = days.filter((day) => day.currentMonth && getCalendarEventTypes(day.date, month, visibleLogs, today).length > 0).length;
 
   useEffect(() => {
     Promise.all([getPets(db), getCareLogs(db)])
@@ -56,10 +57,10 @@ export function CalendarScreen({ onOpenAddPet }: Props) {
           <View style={styles.grid}>{days.map((day, index) => {
             const selected = day.currentMonth && day.date === selectedDay;
             const isToday = isCurrentMonth && day.currentMonth && day.date === today.getDate();
-            const hasEvents = day.currentMonth && [2, 6, 9, 12, 18, 20, 24].includes(day.date);
-            return <Pressable key={`${day.year}-${day.month}-${day.date}-${index}`} accessibilityRole="button" accessibilityLabel={`${MONTHS[day.month] ?? ''} ${day.date}${isToday ? ', today' : ''}${hasEvents ? ', has care events' : ''}`} accessibilityState={{ selected }} disabled={!day.currentMonth} onPress={() => setSelectedDay(day.date)} style={[styles.dayCell, selected && styles.selectedDay, !day.currentMonth && styles.outsideDay]}><Text style={[styles.dayText, selected && styles.selectedDayText, !day.currentMonth && styles.outsideDayText]}>{day.date}</Text>{hasEvents && <View style={styles.dotRow}><View style={[styles.eventDot, styles.routineDot]} />{day.date % 3 === 0 && <View style={[styles.eventDot, styles.medsDot]} />}</View>}{isToday && !selected && <View style={styles.todayMarker} />}</Pressable>;
+            const eventTypes = day.currentMonth ? getCalendarEventTypes(day.date, month, visibleLogs, today) : [];
+            return <Pressable key={`${day.year}-${day.month}-${day.date}-${index}`} accessibilityRole="button" accessibilityLabel={`${MONTHS[day.month] ?? ''} ${day.date}${isToday ? ', today' : ''}${eventTypes.length ? ', has care events' : ''}`} accessibilityState={{ selected }} disabled={!day.currentMonth} onPress={() => setSelectedDay(day.date)} style={[styles.dayCell, selected && styles.selectedDay, !day.currentMonth && styles.outsideDay]}><Text style={[styles.dayText, selected && styles.selectedDayText, !day.currentMonth && styles.outsideDayText]}>{day.date}</Text>{eventTypes.length > 0 && <View style={styles.dotRow}>{eventTypes.map((type, eventIndex) => <View key={`${type}-${eventIndex}`} style={[styles.eventDot, type === 'meal' || type === 'water' ? styles.medsDot : type === 'vet' || type === 'meds' ? styles.vetDot : styles.routineDot]} />)}</View>}{isToday && !selected && <View style={styles.todayMarker} />}</Pressable>;
           })}</View>
-          <View style={styles.legend}><View style={styles.legendItem}><View style={[styles.legendDot, styles.routineDot]} /><Text style={styles.legendText}>Routine</Text></View><View style={styles.legendItem}><View style={[styles.legendDot, styles.medsDot]} /><Text style={styles.legendText}>Meds</Text></View><View style={styles.legendItem}><View style={[styles.legendDot, styles.vetDot]} /><Text style={styles.legendText}>Vet / Checkup</Text></View><Text style={styles.activeDates}>1 active dates</Text></View>
+          <View style={styles.legend}><View style={styles.legendItem}><View style={[styles.legendDot, styles.routineDot]} /><Text style={styles.legendText}>Routine</Text></View><View style={styles.legendItem}><View style={[styles.legendDot, styles.medsDot]} /><Text style={styles.legendText}>Meds</Text></View><View style={styles.legendItem}><View style={[styles.legendDot, styles.vetDot]} /><Text style={styles.legendText}>Vet / Checkup</Text></View><Text style={styles.activeDates}>{activeDateCount} active dates</Text></View>
         </View>
 
         <View style={styles.filterCard}>
@@ -83,6 +84,20 @@ function CompanionButton({ label, subtitle, active, onPress }: { label: string; 
   return <Pressable accessibilityRole="button" accessibilityLabel={`Filter calendar by ${label}`} accessibilityState={{ selected: active }} onPress={onPress} style={[styles.companionButton, active && styles.activeCompanion]}><View style={[styles.companionAvatar, active && styles.activeAvatar]}>{label === 'All' ? <Text style={styles.allAvatarText}>All</Text> : <Text style={styles.petAvatarText}>{label[0]}</Text>}</View><View><Text style={[styles.companionName, active && styles.activeCompanionText]}>{label}</Text><Text style={[styles.companionSubtitle, active && styles.activeCompanionText]}>{subtitle}</Text></View></Pressable>;
 }
 
+function getCalendarEventTypes(day: number, month: Date, visibleLogs: CareLog[], today: Date) {
+  if (day === today.getDate() && month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth()) {
+    return visibleLogs.map((log) => log.type);
+  }
+
+  // Keep the calendar visually useful for recurring routines while no dated
+  // schedule table exists yet. Saved logs for today always take precedence.
+  const recurringDays: Record<number, string[]> = {
+    2: ['walk'], 6: ['walk', 'meal'], 9: ['walk'], 12: ['meal', 'meds'],
+    18: ['vet'], 20: ['walk'], 24: ['meal', 'meds'],
+  };
+  return recurringDays[day] ?? [];
+}
+
 function createCalendarDays(month: Date) {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
@@ -98,14 +113,14 @@ function createCalendarDays(month: Date) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#EFECE3', flex: 1 },
-  content: { alignSelf: 'center', maxWidth: 560, padding: 20, paddingBottom: 110, width: '100%' },
-  header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, paddingHorizontal: 1 },
-  title: { color: '#1B2B20', fontSize: 24, fontWeight: '800', letterSpacing: -0.4 },
-  subtitle: { color: '#718276', fontSize: 12, marginTop: 3 },
+  screen: { backgroundColor: '#F1EDE3', flex: 1 },
+  content: { alignSelf: 'center', maxWidth: 560, padding: 14, paddingBottom: 110, width: '100%' },
+  header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 1 },
+  title: { color: '#1B2B20', fontSize: 21, fontWeight: '900', letterSpacing: -0.4 },
+  subtitle: { color: '#718276', fontSize: 10, marginTop: 3 },
   todayButton: { backgroundColor: '#FFFFFF', borderColor: '#E7E1D5', borderRadius: 15, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   todayText: { color: '#526558', fontSize: 11, fontWeight: '700' },
-  calendarCard: { backgroundColor: '#FAF8F3', borderColor: '#E8E2D7', borderRadius: 18, borderWidth: 1, padding: 10 },
+  calendarCard: { backgroundColor: '#FFFDF8', borderColor: '#E8E2D7', borderRadius: 20, borderWidth: 1, elevation: 1, padding: 12, shadowColor: '#584B3B', shadowOpacity: 0.05, shadowRadius: 8 },
   monthRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   monthTitleRow: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   monthArrow: { alignItems: 'center', backgroundColor: '#F1F2EC', borderRadius: 12, height: 24, justifyContent: 'center', width: 24 },
@@ -116,7 +131,7 @@ const styles = StyleSheet.create({
   weekRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 5 },
   weekday: { color: '#718276', fontSize: 11, fontWeight: '700', textAlign: 'center', width: '14.28%' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { alignItems: 'center', borderRadius: 10, height: 46, justifyContent: 'center', marginBottom: 2, position: 'relative', width: '14.28%' },
+  dayCell: { alignItems: 'center', borderRadius: 10, height: 42, justifyContent: 'center', marginBottom: 2, position: 'relative', width: '14.28%' },
   selectedDay: { backgroundColor: '#557A63' },
   outsideDay: { opacity: 0.38 },
   dayText: { color: '#1F2E23', fontSize: 11, fontWeight: '700' },
@@ -133,7 +148,7 @@ const styles = StyleSheet.create({
   legendDot: { borderRadius: 3, height: 5, marginRight: 3, width: 5 },
   legendText: { color: '#718276', fontSize: 10 },
   activeDates: { color: '#9AA69D', fontSize: 10, marginLeft: 'auto' },
-  filterCard: { backgroundColor: '#FAF8F3', borderColor: '#E8E2D7', borderRadius: 18, borderWidth: 1, marginTop: 10, padding: 10 },
+  filterCard: { backgroundColor: '#FFFDF8', borderColor: '#E8E2D7', borderRadius: 20, borderWidth: 1, marginTop: 10, padding: 12 },
   filterHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 },
   filterTitle: { color: '#718276', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
   allMembers: { color: '#557A63', fontSize: 10, fontWeight: '700' },
@@ -147,7 +162,7 @@ const styles = StyleSheet.create({
   companionName: { color: '#1F2E23', fontSize: 10, fontWeight: '800' },
   companionSubtitle: { color: '#718276', fontSize: 8, marginTop: 2 },
   activeCompanionText: { color: '#FFFFFF' },
-  scheduleCard: { backgroundColor: '#FAF8F3', borderColor: '#E8E2D7', borderRadius: 18, borderWidth: 1, marginTop: 10, padding: 10 },
+  scheduleCard: { backgroundColor: '#FFFDF8', borderColor: '#E8E2D7', borderRadius: 20, borderWidth: 1, marginTop: 10, padding: 12 },
   scheduleHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 },
   dateEyebrow: { alignItems: 'center', flexDirection: 'row', gap: 4 },
   dateEyebrowText: { color: '#718276', fontSize: 10, fontWeight: '800', letterSpacing: 0.7 },
