@@ -1,6 +1,6 @@
 export type PetSpecies = 'dog' | 'cat' | 'rabbit' | 'bird' | 'other';
 
-export type CareType = 'meal' | 'water' | 'walk' | 'meds' | 'vet' | 'weight' | 'note';
+export type CareType = 'meal' | 'water' | 'walk' | 'meds' | 'vet' | 'vaccine' | 'weight' | 'note';
 
 export type Pet = {
   id: string;

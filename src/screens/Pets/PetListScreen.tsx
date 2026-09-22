@@ -55,11 +55,11 @@ export function PetListScreen({ onOpenAddPet, onOpenPet }: Props) {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerCopy}>
             <Text style={styles.title}>My Pack</Text>
             <Text style={styles.subtitle}>{pets.length} companions · Tap any pet to view health details</Text>
           </View>
-          <Pressable accessibilityRole="button" onPress={onOpenAddPet} style={styles.headerAddButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add a pet" onPress={onOpenAddPet} style={styles.headerAddButton}>
             <Plus color="#FFFFFF" size={12} strokeWidth={3} />
             <Text style={styles.headerAddText}>Add Pet</Text>
           </Pressable>
@@ -112,10 +112,11 @@ function PetCard({ pet, primary, selected, onPress, onDelete }: { pet: Pet; prim
 const styles = StyleSheet.create({
   screen: { backgroundColor: '#F1EDE3', flex: 1 },
   content: { alignSelf: 'center', maxWidth: 560, padding: 18, paddingBottom: 130, width: '100%' },
-  header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingTop: 2 },
+  header: { alignItems: 'center', flexDirection: 'row', paddingTop: 2 },
+  headerCopy: { flex: 1, minWidth: 0 },
   title: { color: '#1B2B20', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
   subtitle: { color: '#718276', fontSize: 11, marginTop: 3 },
-  headerAddButton: { alignItems: 'center', backgroundColor: '#315D43', borderRadius: 16, elevation: 2, flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 9, shadowColor: '#315D43', shadowOpacity: 0.2, shadowRadius: 4 },
+  headerAddButton: { alignItems: 'center', backgroundColor: '#315D43', borderRadius: 16, elevation: 2, flexDirection: 'row', flexShrink: 0, marginLeft: 10, paddingHorizontal: 12, paddingVertical: 9, shadowColor: '#315D43', shadowOpacity: 0.2, shadowRadius: 4 },
   headerAddText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800', marginLeft: 4 },
   petList: { gap: 9, marginTop: 14 },
   petCard: { backgroundColor: '#FFFDF8', borderColor: '#E5DDD0', borderRadius: 19, borderWidth: 1, elevation: 1, padding: 10, shadowColor: '#5B4B37', shadowOpacity: 0.06, shadowRadius: 7 },

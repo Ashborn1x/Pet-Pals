@@ -78,7 +78,7 @@ export const MainTabCarousel = forwardRef<MainTabCarouselRef, { progress: Shared
         <View style={[styles.page, { width: pageWidth }]}>
           {item === '/dashboard' && <DashboardScreen onOpenAddPet={() => router.push('/add-pet')} onReturnToWelcome={() => router.replace('/')} />}
           {item === '/pets' && <PetListScreen onOpenAddPet={() => router.push('/add-pet')} onOpenPet={(pet) => router.push({ pathname: '/pet-profile', params: { petId: pet.id } })} />}
-          {item === '/calendar' && <CalendarScreen onOpenAddPet={() => router.push('/add-pet')} />}
+          {item === '/calendar' && <CalendarScreen />}
           {item === '/notifications' && <NotificationsScreen />}
           {item === '/settings' && <SettingsScreen />}
         </View>
