@@ -10,7 +10,7 @@ web-build/
 expo-env.d.ts
 
 ui-pet/
-
+dashboard/
 # Native
 .kotlin/
 *.orig.*

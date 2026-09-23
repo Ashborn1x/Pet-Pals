@@ -43,9 +43,9 @@ function AppContent() {
 
   return (
     <>
-      <StatusBar hidden={false} barStyle="dark-content" backgroundColor="#FFF5EA" translucent={false} />
+      <StatusBar hidden={false} barStyle="dark-content" backgroundColor="transparent" translucent />
       <NavigationBar hidden={false} style="dark" />
-      <View style={{ flex: 1 }}>
+      <View style={{ backgroundColor: '#F9F5EC', flex: 1 }}>
         <View style={{ flex: 1 }}>
           <Stack>
               <Stack.Screen name="index" options={{ headerShown: false }} />
