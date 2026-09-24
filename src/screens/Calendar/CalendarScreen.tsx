@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Circle, Clock, Plus, Syringe, Stethoscope, Trash2, Utensils, X } from 'lucide-react-native';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Circle, Clock, Heart, PawPrint, Plus, Syringe, Stethoscope, Trash2, Utensils, X } from 'lucide-react-native';
 import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { addCareLog, deleteCareLog, getCareLogs, getPets } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CareLog, Pet } from '../../types/pet';
 
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -13,6 +14,7 @@ type ScheduleType = 'vet' | 'vaccine';
 
 export function CalendarScreen() {
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const today = new Date();
   const [pets, setPets] = useState<Pet[]>([]);
   const [logs, setLogs] = useState<CareLog[]>([]);
@@ -84,10 +86,10 @@ export function CalendarScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: 14 + Math.min(insets.top, 18) }]} showsVerticalScrollIndicator={false}>
+        <View pointerEvents="none" style={styles.decorations}><View style={styles.leftBlob} /><View style={styles.rightBlob} /></View>
         <View style={styles.header}>
-          <View><Text style={styles.title}>Care Calendar</Text><Text style={styles.subtitle}>Click any day to view & schedule pet routines</Text></View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Go to today" onPress={() => { setMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDay(today.getDate()); }} style={styles.todayButton}><Text style={styles.todayText}>Today</Text></Pressable>
+          <View><View style={styles.titleRow}><PawPrint color="#476351" fill="#476351" size={25} /><Text style={styles.title}>Care Calendar</Text><Heart color="#476351" size={15} /></View><Text style={styles.subtitle}>Click any day to view & schedule pet routines</Text></View>
         </View>
 
         <View style={styles.calendarCard}>
@@ -168,14 +170,16 @@ function createCalendarDays(month: Date) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#F1EDE3', flex: 1 },
+  screen: { backgroundColor: '#F6F5EF', flex: 1 },
   content: { alignSelf: 'center', maxWidth: 560, padding: 14, paddingBottom: 110, width: '100%' },
-  header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 1 },
-  title: { color: '#1B2B20', fontSize: 21, fontWeight: '900', letterSpacing: -0.4 },
+  decorations: { bottom: 0, left: 0, overflow: 'hidden', position: 'absolute', right: 0, top: 0 }, leftBlob: { backgroundColor: '#E0E9E1', borderRadius: 120, height: 190, left: -90, opacity: 0.6, position: 'absolute', top: -70, width: 190 }, rightBlob: { backgroundColor: '#D5E2D7', borderRadius: 100, height: 150, opacity: 0.5, position: 'absolute', right: -70, top: 30, width: 150 },
+  header: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 1, paddingTop: 4 },
+  titleRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  title: { color: '#1B2B20', fontSize: 23, fontWeight: '900', letterSpacing: -0.5 },
   subtitle: { color: '#718276', fontSize: 10, marginTop: 3 },
   todayButton: { backgroundColor: '#FFFFFF', borderColor: '#E7E1D5', borderRadius: 15, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   todayText: { color: '#526558', fontSize: 11, fontWeight: '700' },
-  calendarCard: { backgroundColor: '#FFFDF8', borderColor: '#E8E2D7', borderRadius: 20, borderWidth: 1, elevation: 1, padding: 12, shadowColor: '#584B3B', shadowOpacity: 0.05, shadowRadius: 8 },
+  calendarCard: { backgroundColor: '#FEFCF7', borderColor: '#E7E0D5', borderRadius: 25, borderWidth: 1, elevation: 1, padding: 14, shadowColor: '#584B3B', shadowOpacity: 0.07, shadowRadius: 8 },
   monthRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   monthTitleRow: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   monthArrow: { alignItems: 'center', backgroundColor: '#F1F2EC', borderRadius: 12, height: 24, justifyContent: 'center', width: 24 },
@@ -203,7 +207,7 @@ const styles = StyleSheet.create({
   legendDot: { borderRadius: 3, height: 5, marginRight: 3, width: 5 },
   legendText: { color: '#718276', fontSize: 10 },
   activeDates: { color: '#9AA69D', fontSize: 10, marginLeft: 'auto' },
-  filterCard: { backgroundColor: '#FFFDF8', borderColor: '#E8E2D7', borderRadius: 20, borderWidth: 1, marginTop: 10, padding: 12 },
+  filterCard: { backgroundColor: '#FEFCF7', borderColor: '#E8E2D7', borderRadius: 22, borderWidth: 1, marginTop: 10, padding: 12 },
   filterHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 },
   filterTitle: { color: '#718276', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
   allMembers: { color: '#557A63', fontSize: 10, fontWeight: '700' },
@@ -217,7 +221,7 @@ const styles = StyleSheet.create({
   companionName: { color: '#1F2E23', fontSize: 10, fontWeight: '800' },
   companionSubtitle: { color: '#718276', fontSize: 8, marginTop: 2 },
   activeCompanionText: { color: '#FFFFFF' },
-  scheduleCard: { backgroundColor: '#FFFDF8', borderColor: '#E8E2D7', borderRadius: 20, borderWidth: 1, marginTop: 10, padding: 12 },
+  scheduleCard: { backgroundColor: '#FEFCF7', borderColor: '#E8E2D7', borderRadius: 22, borderWidth: 1, marginTop: 10, padding: 12 },
   scheduleHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 },
   scheduleHeading: { flex: 1, minWidth: 0 },
   dateEyebrow: { alignItems: 'center', flexDirection: 'row', gap: 4 },

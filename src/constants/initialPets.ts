@@ -1,8 +1,8 @@
 import { CareLog, Pet } from '../types/pet';
 
 export const INITIAL_PETS: Pet[] = [
-  { id: 'pet-1', name: 'Oliver', species: 'dog', breed: 'Golden Retriever Mix', ageYears: 2, ageMonths: 4, weight: 28.5, weightUnit: 'lbs', photoUri: null, avatar: 'dog' },
-  { id: 'pet-2', name: 'Luna', species: 'cat', breed: 'Calico Shorthair', ageYears: 1, ageMonths: 8, weight: 8.2, weightUnit: 'lbs', photoUri: null, avatar: 'cat' },
+  { id: 'pet-1', name: 'Oliver', species: 'dog', gender: 'male', breed: 'Golden Retriever Mix', ageYears: 2, ageMonths: 4, weight: 28.5, weightUnit: 'lbs', photoUri: null, avatar: 'dog' },
+  { id: 'pet-2', name: 'Luna', species: 'cat', gender: 'female', breed: 'Calico Shorthair', ageYears: 1, ageMonths: 8, weight: 8.2, weightUnit: 'lbs', photoUri: null, avatar: 'cat' },
 ];
 
 export const INITIAL_LOGS: CareLog[] = [

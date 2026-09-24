@@ -38,7 +38,7 @@ function AppContent() {
     AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY).then((value) => setOnboardingComplete(value === 'true'));
   }, []);
 
-  const showNavigation = pathname !== '/' || onboardingComplete;
+  const showNavigation = pathname !== '/edit-pet' && pathname !== '/add-pet' && (pathname !== '/' || onboardingComplete);
   const showMainCarousel = MAIN_TAB_ROUTES.includes(pathname as (typeof MAIN_TAB_ROUTES)[number]);
 
   return (

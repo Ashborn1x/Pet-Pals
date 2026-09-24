@@ -15,6 +15,7 @@ import {
   Bird,
   Bone,
   Camera,
+  CalendarDays,
   Cat,
   Check,
   ChevronDown,
@@ -25,9 +26,11 @@ import {
   Sparkles,
   Weight,
 } from 'lucide-react-native';
-import { Pet, PetSpecies } from '../../types/pet';
+import { Pet, PetGender, PetSpecies } from '../../types/pet';
 import { getPetAvatarSource } from '../../constants/petAvatars';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addPetStyles as styles } from './styles';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -61,9 +64,15 @@ function SpeciesIcon({ species, color = '#627C6B', size = 20 }: { species: PetSp
 }
 
 export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Props) {
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(initialPet?.name ?? '');
   const [species, setSpecies] = useState<PetSpecies>(initialPet?.species ?? 'dog');
+  const [gender, setGender] = useState<PetGender>(initialPet?.gender ?? 'unknown');
+  const [birthDate, setBirthDate] = useState(initialPet?.birthDate ?? '');
+  const [birthDateEstimated, setBirthDateEstimated] = useState(initialPet?.birthDateEstimated ?? false);
+  const [birthDatePickerOpen, setBirthDatePickerOpen] = useState(false);
   const [breed, setBreed] = useState(initialPet?.breed ?? BREEDS.dog[0]);
+  const [customBreed, setCustomBreed] = useState(initialPet?.breed && !BREEDS[initialPet.species].includes(initialPet.breed) ? initialPet.breed : '');
   const [weight, setWeight] = useState(String(initialPet?.weight ?? 24));
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(initialPet?.weightUnit ?? 'lbs');
   const [photoUri, setPhotoUri] = useState<string | null>(initialPet?.photoUri ?? null);
@@ -76,6 +85,7 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
   const selectSpecies = (nextSpecies: PetSpecies) => {
     setSpecies(nextSpecies);
     setBreed(BREEDS[nextSpecies][0]);
+    setCustomBreed('');
     setTypeOpen(false);
   };
 
@@ -106,7 +116,10 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
       id: initialPet?.id ?? '',
       name: name.trim(),
       species,
-      breed: breed.trim() || 'Companion Pet',
+      gender,
+      birthDate: birthDate.trim() || null,
+      birthDateEstimated: Boolean(birthDate.trim() && birthDateEstimated),
+      breed: (breed === 'Other' ? customBreed : breed).trim() || 'Companion Pet',
       ageYears: initialPet?.ageYears ?? 0,
       ageMonths: initialPet?.ageMonths ?? 0,
       weight: Number.parseFloat(weight) || 10,
@@ -122,7 +135,7 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -161,6 +174,17 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
             </View>
           </View>
 
+          <View style={styles.divider} />
+          <View style={styles.fieldRow}>
+            <View style={styles.greenBadge}><CalendarDays color="#557A63" size={20} strokeWidth={2} /></View>
+            <View style={styles.genderContent}><Text style={styles.fieldLabel}>Birth date <Text style={styles.optionalLabel}>(optional)</Text></Text><Pressable accessibilityRole="button" accessibilityLabel="Choose birth date" onPress={() => setBirthDatePickerOpen(true)} style={styles.dateValue}><Text style={[styles.fieldValue, !birthDate && styles.placeholderValue]}>{birthDate || 'Choose a date'}</Text></Pressable>{birthDatePickerOpen && <DateTimePicker value={parseBirthDate(birthDate)} mode="date" display="default" maximumDate={new Date()} onChange={(_, value) => { setBirthDatePickerOpen(false); if (value) setBirthDate(formatBirthDate(value)); }} />}</View><Pressable accessibilityRole="checkbox" accessibilityState={{ checked: birthDateEstimated, disabled: !birthDate }} disabled={!birthDate} onPress={() => setBirthDateEstimated((current) => !current)} style={[styles.estimatedButton, birthDateEstimated && styles.activeEstimated, !birthDate && styles.disabledEstimated]}><Text style={[styles.estimatedText, birthDateEstimated && styles.activeEstimatedText]}>Estimated</Text></Pressable>
+          </View>
+
+          <View style={styles.divider} />
+          <View style={styles.fieldRow}>
+            <View style={styles.greenBadge}><Text style={styles.genderGlyph}>♀♂</Text></View>
+            <View style={styles.genderContent}><Text style={styles.fieldLabel}>Gender</Text><View style={styles.genderOptions}>{(['female', 'male', 'unknown'] as PetGender[]).map((item) => <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: gender === item }} onPress={() => setGender(item)} style={[styles.genderButton, gender === item && styles.activeGender]}><Text style={[styles.genderText, gender === item && styles.activeGenderText]}>{item === 'unknown' ? 'Not set' : item[0].toUpperCase() + item.slice(1)}</Text></Pressable>)}</View></View>
+          </View>
           <View style={styles.divider} />
           <View>
             <Pressable
@@ -209,11 +233,12 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
               <View style={styles.breedPanel}>
                 <Text style={styles.panelLabel}>Popular {currentSpecies.label} Breeds</Text>
                 {BREEDS[species].map((item) => (
-                  <Pressable key={item} onPress={() => { setBreed(item); setBreedOpen(false); }} style={styles.breedOption}>
+                  <Pressable key={item} onPress={() => { setBreed(item); if (item === 'Other') setCustomBreed(customBreed || (BREEDS[species].includes(breed) ? '' : breed)); setBreedOpen(false); }} style={styles.breedOption}>
                     <Text style={styles.optionText}>{item}</Text>
                     {breed === item && <Check color="#627C6B" size={16} strokeWidth={3} />}
                   </Pressable>
                 ))}
+                {(breed === 'Other' || !!customBreed) && <TextInput accessibilityLabel="Custom breed" value={customBreed} onChangeText={setCustomBreed} placeholder="Type your breed (optional)" placeholderTextColor="#A0B0A5" style={styles.customBreedInput} />}
               </View>
             )}
           </View>
@@ -237,9 +262,18 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
         <View style={styles.bottomActions}>
           <Pressable accessibilityRole="button" onPress={save} style={styles.saveButton}><Text style={styles.saveText}>{mode === 'edit' ? 'Save Changes' : 'Save'}</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={onBack} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable>
-          <View style={styles.homeIndicator} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+function parseBirthDate(value: string) {
+  if (!value) return new Date();
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function formatBirthDate(value: Date) {
+  return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }

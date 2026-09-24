@@ -1,4 +1,5 @@
 export type PetSpecies = 'dog' | 'cat' | 'rabbit' | 'bird' | 'other';
+export type PetGender = 'male' | 'female' | 'unknown';
 
 export type CareType = 'meal' | 'water' | 'walk' | 'meds' | 'vet' | 'vaccine' | 'weight' | 'note';
 
@@ -6,6 +7,9 @@ export type Pet = {
   id: string;
   name: string;
   species: PetSpecies;
+  gender: PetGender;
+  birthDate?: string | null;
+  birthDateEstimated?: boolean;
   breed: string;
   ageYears: number;
   ageMonths: number;

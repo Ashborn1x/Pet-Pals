@@ -1,10 +1,10 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { INITIAL_LOGS, INITIAL_PETS } from '../constants/initialPets';
-import type { CareLog, CareType, Pet, PetPhoto, PetSpecies } from '../types/pet';
+import type { CareLog, CareType, Pet, PetPhoto, PetSpecies, PetGender } from '../types/pet';
 
 type PetRow = {
-  id: string; name: string; species: PetSpecies; breed: string; age_years: number;
-  age_months: number; weight: number; weight_unit: 'lbs' | 'kg'; photo_uri: string | null; avatar: Pet['avatar'];
+  id: string; name: string; species: PetSpecies; gender: PetGender; breed: string; age_years: number;
+  age_months: number; weight: number; weight_unit: 'lbs' | 'kg'; photo_uri: string | null; birth_date: string | null; birth_date_estimated: number; avatar: Pet['avatar'];
 };
 
 type CareLogRow = {
@@ -52,6 +52,7 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
       species TEXT NOT NULL,
+      gender TEXT NOT NULL DEFAULT 'unknown',
       breed TEXT NOT NULL,
       age_years INTEGER NOT NULL DEFAULT 0,
       age_months INTEGER NOT NULL DEFAULT 0,
@@ -81,6 +82,21 @@ export async function initializeDatabase(db: SQLiteDatabase) {
   `);
   try {
     await db.execAsync('ALTER TABLE pets ADD COLUMN photo_uri TEXT');
+  } catch {
+    // Existing databases already have the column.
+  }
+  try {
+    await db.execAsync("ALTER TABLE pets ADD COLUMN gender TEXT NOT NULL DEFAULT 'unknown'");
+  } catch {
+    // Existing databases already have the column.
+  }
+  try {
+    await db.execAsync('ALTER TABLE pets ADD COLUMN birth_date TEXT');
+  } catch {
+    // Existing databases already have the column.
+  }
+  try {
+    await db.execAsync('ALTER TABLE pets ADD COLUMN birth_date_estimated INTEGER NOT NULL DEFAULT 0');
   } catch {
     // Existing databases already have the column.
   }
@@ -165,9 +181,9 @@ export async function updatePet(db: SQLiteDatabase, petId: string, input: Omit<P
   const pet: Pet = { ...input, id: petId, avatar: input.species };
   await db.runAsync(
     `UPDATE pets
-     SET name = ?, species = ?, breed = ?, age_years = ?, age_months = ?, weight = ?, weight_unit = ?, photo_uri = ?, avatar = ?
+     SET name = ?, species = ?, gender = ?, birth_date = ?, birth_date_estimated = ?, breed = ?, age_years = ?, age_months = ?, weight = ?, weight_unit = ?, photo_uri = ?, avatar = ?
      WHERE id = ?`,
-    pet.name, pet.species, pet.breed, pet.ageYears, pet.ageMonths, pet.weight, pet.weightUnit, pet.photoUri, pet.avatar, pet.id,
+    pet.name, pet.species, pet.gender, pet.birthDate ?? null, pet.birthDateEstimated ? 1 : 0, pet.breed, pet.ageYears, pet.ageMonths, pet.weight, pet.weightUnit, pet.photoUri, pet.avatar, pet.id,
   );
   invalidatePets(db);
   return pet;
@@ -222,9 +238,9 @@ export async function addCareLog(db: SQLiteDatabase, input: Omit<CareLog, 'id'>)
 
 async function insertPet(db: SQLiteDatabase, pet: Pet) {
   await db.runAsync(
-    `INSERT OR IGNORE INTO pets (id, name, species, breed, age_years, age_months, weight, weight_unit, photo_uri, avatar)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    pet.id, pet.name, pet.species, pet.breed, pet.ageYears, pet.ageMonths, pet.weight, pet.weightUnit, pet.photoUri, pet.avatar,
+    `INSERT OR IGNORE INTO pets (id, name, species, gender, birth_date, birth_date_estimated, breed, age_years, age_months, weight, weight_unit, photo_uri, avatar)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    pet.id, pet.name, pet.species, pet.gender, pet.birthDate ?? null, pet.birthDateEstimated ? 1 : 0, pet.breed, pet.ageYears, pet.ageMonths, pet.weight, pet.weightUnit, pet.photoUri, pet.avatar,
   );
 }
 
@@ -237,7 +253,7 @@ async function insertCareLog(db: SQLiteDatabase, log: CareLog) {
 }
 
 function toPet(row: PetRow): Pet {
-  return { id: row.id, name: row.name, species: row.species, breed: row.breed, ageYears: row.age_years, ageMonths: row.age_months, weight: row.weight, weightUnit: row.weight_unit, photoUri: row.photo_uri ?? null, avatar: row.avatar };
+  return { id: row.id, name: row.name, species: row.species, gender: row.gender ?? 'unknown', birthDate: row.birth_date ?? null, birthDateEstimated: Boolean(row.birth_date_estimated), breed: row.breed, ageYears: row.age_years, ageMonths: row.age_months, weight: row.weight, weightUnit: row.weight_unit, photoUri: row.photo_uri ?? null, avatar: row.avatar };
 }
 
 function toCareLog(row: CareLogRow): CareLog {
