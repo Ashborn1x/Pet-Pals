@@ -103,10 +103,10 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
       Alert.alert('Photo access needed', 'Allow photo access to add a gallery photo.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, allowsMultipleSelection: true, selectionLimit: 0, quality: 1 });
     if (result.canceled) return;
-    const photo = await addPetPhoto(db, pet.id, result.assets[0].uri);
-    setPhotos((current) => [photo, ...current]);
+    const newPhotos = await Promise.all(result.assets.map((asset) => addPetPhoto(db, pet.id, asset.uri)));
+    setPhotos((current) => [...newPhotos.reverse(), ...current]);
   };
 
   const removePhoto = (photo: PetPhoto) => {
@@ -122,7 +122,7 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
-          <Image source={getProfileImage(pet)} resizeMode="cover" style={styles.heroImage} />
+          <Image source={getProfileImage(pet)} resizeMode="contain" style={styles.heroImage} />
           <Svg pointerEvents="none" style={styles.heroFade} viewBox="0 0 100 100" preserveAspectRatio="none">
             <Defs>
               <SvgLinearGradient id="petProfileHeroFade" x1="0" y1="0" x2="0" y2="1">
@@ -143,7 +143,7 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
           <View style={styles.heroInfo}>
             <View style={styles.heroNameBlock}>
               <Text style={styles.heroName}>{pet.name}</Text>
-              <Text style={styles.heroBreed}>{pet.breed} · {pet.ageYears} yrs · {pet.weight} {pet.weightUnit}</Text>
+              <Text style={styles.heroBreed}>{pet.breed} · {pet.ageYears} yrs · {pet.weight} {pet.weightUnit}{pet.birthDate ? ` · Born ${formatPetBirthDate(pet.birthDate, pet.birthDateEstimated)}` : ''}</Text>
             </View>
           </View>
         </View>
@@ -173,6 +173,14 @@ function getProfileImage(pet: Pet) {
 
 function SectionHeader({ label, action, onPress }: { label: string; action: string; onPress?: () => void }) {
   return <View style={styles.sectionHeader}><Text style={styles.sectionLabel}>{label}</Text><Pressable accessibilityRole="button" onPress={onPress ?? (() => undefined)} style={styles.sectionActionButton}><Plus color="#2E5B42" size={14} strokeWidth={2.5} /><Text style={styles.sectionAction}>{action}</Text></Pressable></View>;
+}
+
+function formatPetBirthDate(value: string, estimated?: boolean) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-US', estimated
+    ? { month: 'short', year: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatCurrentTime() {
@@ -212,7 +220,7 @@ function HealthPanel({ logs, onAdd }: { logs: CareLog[]; onAdd: () => void }) {
 }
 
 function GalleryPanel({ photos, onAdd, onDelete }: { photos: PetPhoto[]; onAdd: () => void; onDelete: (photo: PetPhoto) => void }) {
-  return <View style={styles.panelStack}><SectionHeader label={`${photos.length} PHOTOS`} action="Add Photo" onPress={onAdd} />{photos.length ? <View style={styles.galleryGrid}>{photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel="Remove gallery photo" onLongPress={() => onDelete(photo)}><Image source={{ uri: photo.uri }} style={styles.galleryImage} /></Pressable>)}</View> : <View style={styles.emptyGallery}><ImagePlus color="#D2B28A" size={28} /><Text style={styles.emptyGalleryTitle}>No photos yet</Text><Text style={styles.emptyGalleryText}>Add a photo to keep your pet&apos;s memories here.</Text></View>}</View>;
+  return <View style={styles.panelStack}><SectionHeader label={`${photos.length} PHOTOS`} action="Add Photos" onPress={onAdd} />{photos.length ? <View style={styles.galleryGrid}>{photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel="Remove gallery photo" onLongPress={() => onDelete(photo)}><Image source={{ uri: photo.uri }} resizeMode="contain" style={styles.galleryImage} /></Pressable>)}</View> : <View style={styles.emptyGallery}><ImagePlus color="#D2B28A" size={28} /><Text style={styles.emptyGalleryTitle}>No photos yet</Text><Text style={styles.emptyGalleryText}>Add photos to keep your pet&apos;s memories here.</Text></View>}</View>;
 }
 
 function EntryModal({ type, editing, title, detail, time, date, onChangeTitle, onChangeDetail, onChangeTime, onChangeDate, onClose, onDelete, onSave }: { type?: 'activity' | 'meal' | 'health'; editing: boolean; title: string; detail: string; time: string; date: string; onChangeTitle: (value: string) => void; onChangeDetail: (value: string) => void; onChangeTime: (value: string) => void; onChangeDate: (value: string) => void; onClose: () => void; onDelete: () => void; onSave: () => void }) {
@@ -320,8 +328,8 @@ const styles = StyleSheet.create({
   emptyGallery: { alignItems: 'center', backgroundColor: '#FAF7F0', borderColor: '#E8E0D3', borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', padding: 30 },
   emptyGalleryTitle: { color: '#425548', fontSize: 12, fontWeight: '800', marginTop: 8 },
   emptyGalleryText: { color: '#8A9B8F', fontSize: 9, marginTop: 4, textAlign: 'center' },
-  galleryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  galleryImage: { backgroundColor: '#F0ECE3', borderRadius: 14, height: 104, width: '31%' },
+  galleryGrid: { backgroundColor: '#FAF8F3', borderColor: '#EDE8DE', borderRadius: 22, borderWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 10 },
+  galleryImage: { aspectRatio: 1, backgroundColor: '#F4F0E6', borderColor: '#E5DDD0', borderRadius: 16, borderWidth: 1, width: '48%' },
   modalOverlay: { backgroundColor: '#00000055', flex: 1, justifyContent: 'flex-end' },
   modalCard: { backgroundColor: '#FFFDF8', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   modalTitle: { color: '#1F2E23', fontSize: 20, fontWeight: '800', marginBottom: 14 },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bell, CalendarDays, Check, ChevronRight, Clock, Droplets, Footprints, Heart, PawPrint, Pill, Plus, Utensils, Weight, X } from 'lucide-react-native';
@@ -6,22 +6,43 @@ import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { addCareLog, getCareLogs, getPets, updateCareLog } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
+import { Defs, Ellipse, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { CareLog, CareType, Pet } from '../../types/pet';
 import { dashboardStyles as styles } from './styles';
 import { getPetAvatarSource } from '../../constants/petAvatars';
 
-type Props = { onOpenAddPet: () => void; onReturnToWelcome: () => void };
+type Props = { onOpenAddPet: () => void; onReturnToWelcome: () => void; refreshToken?: number };
 type TimeOfDay = 'morning' | 'afternoon' | 'night';
 const profileAvatar = require('../../assets/images/jordan_avatar_photo_1789667660941.jpg');
 const heroImages = { morning: require('../../assets/images/hero_morning_clay_matched_1790140030746.jpg'), afternoon: require('../../assets/images/hero_afternoon_clay_outside_1790139733150.jpg'), night: require('../../assets/images/hero_pet_night_clay_1790139519087.jpg') };
 function getTimeOfDay(): TimeOfDay { const hour = new Date().getHours(); return hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'night'; }
+
+function DashboardHero({ timeOfDay, insetsTop, greeting, subtitle, onReturnToWelcome }: { timeOfDay: TimeOfDay; insetsTop: number; greeting: string; subtitle: string; onReturnToWelcome: () => void }) {
+  return <View style={[styles.hero, { paddingTop: insetsTop }]}><Image source={heroImages[timeOfDay]} style={[styles.heroImage, { top: 10 }]} resizeMode="cover" /><LinearGradient pointerEvents="none" colors={['#F9F5EE', '#F9F5EE', '#F9F5EED9', '#F9F5EE80', '#F9F5EE00']} locations={[0, 0.18, 0.38, 0.6, 0.9]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.heroHorizontalFade, { top: 10 }]} /><LinearGradient pointerEvents="none" colors={['#F9F5EE00', '#F9F5EE00', '#F9F5EE']} locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.heroVerticalFade, { top: 10 }]} />
+    <View style={[styles.topBar, { justifyContent: 'flex-end', paddingTop: 20 }]}><View style={styles.headerActions}><Pressable accessibilityLabel="Notifications" style={styles.iconButton}><Bell color="#214332" size={21} /><View style={styles.notificationDot} /></Pressable><Pressable accessibilityLabel="Open profile" onPress={onReturnToWelcome} style={styles.profileButton}><Image source={profileAvatar} style={styles.profileImage} /><View style={styles.onlineDot} /></Pressable></View></View>
+    <View style={[styles.greetingBlock, timeOfDay === 'afternoon' && styles.afternoonGreeting]}><Text style={styles.greeting}>{greeting} <Text style={styles.heartMark}>♡</Text></Text><Text style={styles.greetingSubtext}>{subtitle}</Text></View>
+  </View>;
+}
+
+function BackgroundDecorations() {
+  return <Svg pointerEvents="none" style={styles.backgroundSvg} viewBox="0 0 390 844" preserveAspectRatio="none">
+    <Defs>
+      <RadialGradient id="dashboardTopLeft" cx="50%" cy="50%" rx="50%" ry="50%"><Stop offset="0" stopColor="#DBE2D4" stopOpacity="0.7" /><Stop offset="0.7" stopColor="#DBE2D4" stopOpacity="0" /></RadialGradient>
+      <RadialGradient id="dashboardTopRight" cx="50%" cy="50%" rx="50%" ry="50%"><Stop offset="0" stopColor="#EBE6D4" stopOpacity="0.8" /><Stop offset="0.7" stopColor="#EBE6D4" stopOpacity="0" /></RadialGradient>
+    </Defs>
+    <Ellipse cx="60" cy="40" rx="110" ry="100" fill="url(#dashboardTopLeft)" />
+    <Ellipse cx="335" cy="60" rx="95" ry="90" fill="url(#dashboardTopRight)" />
+
+  </Svg>;
+}
 
 function CareIcon({ type, color = '#557A63', size = 17 }: { type: CareType; color?: string; size?: number }) {
   const Icon = type === 'meal' ? Utensils : type === 'water' ? Droplets : type === 'walk' ? Footprints : type === 'meds' ? Pill : type === 'weight' ? Weight : Heart;
   return <Icon color={color} size={size} strokeWidth={2} />;
 }
 
-export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
+export function DashboardScreen({ onOpenAddPet, onReturnToWelcome, refreshToken = 0 }: Props) {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const [pets, setPets] = useState<Pet[]>([]); const [logs, setLogs] = useState<CareLog[]>([]); const [dataLoading, setDataLoading] = useState(true);
@@ -34,15 +55,30 @@ export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
   const greeting = timeOfDay === 'morning' ? 'Morning, Jordan!' : timeOfDay === 'afternoon' ? 'Afternoon, Jordan!' : 'Good night, Jordan!';
   const subtitle = timeOfDay === 'morning' ? "It's a perfect day for a walk. Your pets are lucky to have you! 🐾" : timeOfDay === 'afternoon' ? 'Sunny afternoon outside! Playtime and happy fun with your pack. 🐾' : 'All cozy in bed. Your pets are safe, loved, and fast asleep. 🐾';
 
-  useEffect(() => { Promise.all([getPets(db), getCareLogs(db)]).then(([nextPets, nextLogs]) => { setPets(nextPets); setLogs(nextLogs); setSelectedPetId((current) => current || nextPets[0]?.id || ''); }).finally(() => setDataLoading(false)); }, [db]);
+  const loadDashboardData = useCallback(() => {
+    let active = true;
+    setDataLoading(true);
+    Promise.all([getPets(db), getCareLogs(db)]).then(([nextPets, nextLogs]) => {
+      if (!active) return;
+      setPets(nextPets);
+      setLogs(nextLogs);
+      setSelectedPetId((current) => nextPets.some((pet) => pet.id === current) ? current : nextPets[0]?.id || '');
+    }).finally(() => { if (active) setDataLoading(false); });
+    return () => { active = false; };
+  }, [db]);
+  useFocusEffect(loadDashboardData);
+  useEffect(() => { if (refreshToken <= 0) return; return loadDashboardData(); }, [loadDashboardData, refreshToken]);
   useEffect(() => { const timer = setInterval(() => setTimeOfDay(getTimeOfDay()), 60_000); return () => clearInterval(timer); }, []);
   const toggleLog = async (id: string) => { const current = logs.find((log) => log.id === id); if (!current) return; await updateCareLog(db, id, !current.completed); setLogs((items) => items.map((log) => log.id === id ? { ...log, completed: !log.completed } : log)); };
   const selectLogType = (type: CareType) => { setLogType(type); setLogTitle(type === 'walk' ? `Walk ${currentPet?.name ?? ''}` : type === 'meal' ? 'Afternoon Meal' : type === 'water' ? 'Fresh Water Refill' : 'Daily Vitamins'); };
   const createLog = async () => { if (!logTitle.trim() || !currentPet) return; const log = await addCareLog(db, { petId: currentPet.id, type: logType, title: logTitle.trim(), detail: logDetail.trim() || `Scheduled care for ${currentPet.name}`, time: 'Now', date: 'Today', completed: false }); setLogs((items) => [log, ...items]); setLogTitle(''); setLogDetail(''); setQuickLogOpen(false); };
-  if (dataLoading || !currentPet) return <SkeletonScreen variant="dashboard" />;
+  if (dataLoading) return <SkeletonScreen variant="dashboard" />;
+  if (!currentPet) return <View style={styles.screen}><BackgroundDecorations /><ScrollView contentContainerStyle={[styles.content, { marginTop: -insets.top + 8 }]} showsVerticalScrollIndicator={false}><DashboardHero timeOfDay={timeOfDay} insetsTop={insets.top} greeting={greeting} subtitle={subtitle} onReturnToWelcome={onReturnToWelcome} /><View style={styles.emptyScreen}><PawPrint color="#557A63" fill="#E4ECE7" size={42} /><Text style={styles.emptyTitle}>Your pack is empty</Text><Text style={styles.emptyText}>Add your first pet to start tracking care routines.</Text><Pressable accessibilityRole="button" onPress={onOpenAddPet} style={styles.emptyButton}><Plus color="#557A63" size={17} strokeWidth={3} /><Text style={styles.emptyButtonText}>Add Pet</Text></Pressable></View></ScrollView></View>;
 
-  return <View style={styles.screen}><ScrollView contentContainerStyle={[styles.content, { marginTop: -insets.top + 8 }]} showsVerticalScrollIndicator={false}>
-    <View style={[styles.hero, { paddingTop: insets.top }]}><Image source={heroImages[timeOfDay]} style={[styles.heroImage, { top: 10 }]} resizeMode="cover" /><LinearGradient pointerEvents="none" colors={['#F9F5EC', '#F9F5EC', '#F9F5ECD9', '#F9F5EC80', '#F9F5EC00']} locations={[0, 0.18, 0.38, 0.6, 0.9]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.heroHorizontalFade, { top: 10 }]} /><LinearGradient pointerEvents="none" colors={['#F9F5EC00', '#F9F5EC00', '#F9F5EC']} locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.heroVerticalFade, { top: 10 }]} />
+  return <View style={styles.screen}>
+    <BackgroundDecorations />
+    <ScrollView contentContainerStyle={[styles.content, { marginTop: -insets.top + 8 }]} showsVerticalScrollIndicator={false}>
+    <View style={[styles.hero, { paddingTop: insets.top }]}><Image source={heroImages[timeOfDay]} style={[styles.heroImage, { top: 10 }]} resizeMode="cover" /><LinearGradient pointerEvents="none" colors={['#F9F5EE', '#F9F5EE', '#F9F5EED9', '#F9F5EE80', '#F9F5EE00']} locations={[0, 0.18, 0.38, 0.6, 0.9]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[styles.heroHorizontalFade, { top: 10 }]} /><LinearGradient pointerEvents="none" colors={['#F9F5EE00', '#F9F5EE00', '#F9F5EE']} locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.heroVerticalFade, { top: 10 }]} />
       <View style={[styles.topBar, { justifyContent: 'flex-end', paddingTop: 20 }]}><View style={styles.headerActions}><Pressable accessibilityLabel="Notifications" style={styles.iconButton}><Bell color="#214332" size={21} /><View style={styles.notificationDot} /></Pressable><Pressable accessibilityLabel="Open profile" onPress={onReturnToWelcome} style={styles.profileButton}><Image source={profileAvatar} style={styles.profileImage} /><View style={styles.onlineDot} /></Pressable></View></View>
       <View style={[styles.greetingBlock, timeOfDay === 'afternoon' && styles.afternoonGreeting]}><Text style={styles.greeting}>{greeting} <Text style={styles.heartMark}>♡</Text></Text><Text style={styles.greetingSubtext}>{subtitle}</Text></View>
     </View>
@@ -50,6 +86,6 @@ export function DashboardScreen({ onOpenAddPet, onReturnToWelcome }: Props) {
       <Pressable style={[styles.dashboardCard, styles.nextCard]}><View style={styles.cardHeader}><View style={styles.nextIcon}><CalendarDays color="#825E2C" size={15} /></View><Text style={styles.cardTitle}>Up Next</Text><ChevronRight color="#9AA39D" size={15} /></View><View style={styles.nextInner}><View style={styles.nextSmallIcon}><Heart color="#C95B47" size={15} /></View><View style={styles.nextCopy}><Text numberOfLines={1} style={styles.nextTitle}>{nextLog?.title ?? 'All Done!'}</Text><Text numberOfLines={1} style={styles.nextMeta}>{nextLog ? `${nextLog.date} · ${nextLog.time}` : 'No pending visits'}</Text></View></View><Text style={styles.goodWork}>✨ Good work today! ♡</Text></Pressable></View>
     <View style={[styles.dashboardCard, styles.packCard]}><View style={styles.sectionHeader}><View style={styles.sectionHeading}><PawPrint color="#1F3E2F" fill="#1F3E2F" size={18} /><Text style={styles.sectionTitle}>Your Pack</Text></View><Text style={styles.viewAll}>View All ›</Text></View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.petRow}>{pets.map((pet) => <Pressable key={pet.id} onPress={() => setSelectedPetId(pet.id)} style={styles.petItem}><View style={[styles.petAvatarRing, pet.id === currentPet.id && styles.selectedPetRing]}><Image source={getPetAvatarSource(pet.species, pet.photoUri)} style={styles.petAvatar} /><View style={styles.selectedDot} /></View><Text style={styles.petName}>{pet.name} <Text style={styles.genderMark}>{pet.species === 'dog' ? '♂' : '♀'}</Text></Text><Text style={styles.petAge}>{pet.ageYears}y {pet.ageMonths}m</Text><Text style={styles.statusPill}>● Healthy</Text></Pressable>)}<Pressable onPress={onOpenAddPet} style={styles.petItem}><View style={styles.addPetCircle}><Plus color="#5E675F" size={23} /></View><Text style={styles.petName}>Add Pet</Text><Text style={styles.petAge}> </Text></Pressable></ScrollView></View>
     <View style={styles.routineSection}><View style={styles.sectionHeader}><View style={styles.sectionHeading}><CalendarDays color="#2D4B3E" size={18} /><Text style={styles.sectionTitle}>Today&apos;s Routine</Text></View><Pressable onPress={() => setShowAll((value) => !value)}><Text style={styles.viewAll}>{showAll ? 'Active Pet' : 'View All'} ›</Text></Pressable></View>{displayedLogs.slice(0, 4).map((log) => { const pet = pets.find((item) => item.id === log.petId) ?? currentPet; return <Pressable key={log.id} onPress={() => toggleLog(log.id)} style={styles.routineCard}><View style={[styles.routineIcon, log.type === 'walk' ? styles.walkIcon : log.type === 'meal' ? styles.mealIcon : styles.medsIcon]}><CareIcon type={log.type} color={log.type === 'walk' ? '#E8A524' : log.type === 'meal' ? '#2D4B3E' : '#694AA1'} size={22} /></View><View style={styles.routineBody}><Text style={[styles.routineTitle, log.completed && styles.completedTitle]}>{log.title}</Text><View style={styles.routineMeta}><Clock color="#9DA59F" size={12} /><Text numberOfLines={1} style={styles.routineDetail}>{log.time} · {log.detail}</Text></View></View><Image source={getPetAvatarSource(pet.species, pet.photoUri)} style={styles.routineAvatar} /><View style={[styles.statusButton, log.completed ? styles.completedButton : styles.pendingButton]}>{log.completed && <Check color="#FFFFFF" size={13} strokeWidth={3} />}<Text style={[styles.statusText, log.completed && styles.completedStatusText]}>{log.completed ? 'Completed' : 'Pending'}</Text></View></Pressable>; })}<Pressable onPress={() => setQuickLogOpen(true)} style={styles.addRoutineShortcut}><Plus color="#2D4B3E" size={16} /><Text style={styles.addRoutineShortcutText}>Add Routine For Today</Text></Pressable></View>
-  </ScrollView>
+    </ScrollView>
   <Modal visible={quickLogOpen} animationType="slide" transparent onRequestClose={() => setQuickLogOpen(false)}><View style={styles.modalBackdrop}><View style={styles.modal}><View style={styles.modalHeader}><View><Text style={styles.modalTitle}>Add Today&apos;s Routine</Text><Text style={styles.modalSubtitle}>For {currentPet.name}</Text></View><Pressable onPress={() => setQuickLogOpen(false)} style={styles.closeButton}><X color="#55675B" size={17} /></Pressable></View><Text style={styles.formLabel}>Activity Type</Text><View style={styles.typeRow}>{(['walk', 'meal', 'water', 'meds'] as CareType[]).map((type) => <Pressable key={type} onPress={() => selectLogType(type)} style={[styles.typeButton, logType === type && styles.activeTypeButton]}><CareIcon type={type} color={logType === type ? '#FFFFFF' : '#495B50'} size={15} /><Text style={[styles.typeText, logType === type && styles.activeTypeText]}>{type === 'meds' ? 'Meds' : type[0].toUpperCase() + type.slice(1)}</Text></Pressable>)}</View><Text style={styles.formLabel}>Activity Title</Text><TextInput value={logTitle} onChangeText={setLogTitle} placeholder="e.g. Walk Oliver" placeholderTextColor="#A0B0A5" style={styles.formInput} /><Text style={styles.formLabel}>Details / Notes</Text><TextInput value={logDetail} onChangeText={setLogDetail} placeholder="e.g. neighborhood stroll" placeholderTextColor="#A0B0A5" style={styles.formInput} /><View style={styles.modalActions}><Pressable onPress={() => setQuickLogOpen(false)} style={styles.modalCancel}><Text style={styles.modalCancelText}>Cancel</Text></Pressable><Pressable onPress={createLog} style={styles.modalSave}><Text style={styles.modalSaveText}>Save Routine</Text></Pressable></View></View></View></Modal></View>;
 }

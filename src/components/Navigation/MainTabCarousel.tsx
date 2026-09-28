@@ -1,5 +1,5 @@
 import { usePathname, useRouter } from 'expo-router';
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Carousel, type CarouselRef } from 'react-native-reanimated-carousel';
 import type { SharedValue } from 'react-native-reanimated';
@@ -22,6 +22,7 @@ export const MainTabCarousel = forwardRef<MainTabCarouselRef, { progress: Shared
   const { width, height } = useWindowDimensions();
   const carouselRef = useRef<CarouselRef>(null);
   const requestedIndexRef = useRef<number | null>(null);
+  const [petDataVersion, setPetDataVersion] = useState(0);
   const route = normalizeRoute(pathname);
   const activeIndex = Math.max(0, MAIN_TAB_ROUTES.indexOf(route));
   const pageWidth = Math.max(1, width);
@@ -76,8 +77,8 @@ export const MainTabCarousel = forwardRef<MainTabCarouselRef, { progress: Shared
       onSnapToItem={(index) => changeRoute(MAIN_TAB_ROUTES[index])}
       renderItem={({ item }) => (
         <View style={[styles.page, { width: pageWidth }]}>
-          {item === '/dashboard' && <DashboardScreen onOpenAddPet={() => router.push('/add-pet')} onReturnToWelcome={() => router.replace('/')} />}
-          {item === '/pets' && <PetListScreen onOpenAddPet={() => router.push('/add-pet')} onOpenPet={(pet) => router.push({ pathname: '/pet-profile', params: { petId: pet.id } })} onOpenCalendar={() => router.replace('/calendar')} />}
+          {item === '/dashboard' && <DashboardScreen refreshToken={petDataVersion} onOpenAddPet={() => router.push('/add-pet')} onReturnToWelcome={() => router.replace('/')} />}
+          {item === '/pets' && <PetListScreen onPetsChanged={() => setPetDataVersion((version) => version + 1)} onOpenAddPet={() => router.push('/add-pet')} onOpenPet={(pet) => router.push({ pathname: '/pet-profile', params: { petId: pet.id } })} onOpenCalendar={(pet) => router.replace({ pathname: '/calendar', params: { petId: pet.id } })} />}
           {item === '/calendar' && <CalendarScreen />}
           {item === '/notifications' && <NotificationsScreen />}
           {item === '/settings' && <SettingsScreen />}

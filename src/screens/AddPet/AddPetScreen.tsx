@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -15,6 +17,7 @@ import {
   Bird,
   Bone,
   Camera,
+  Crop,
   CalendarDays,
   Cat,
   Check,
@@ -29,6 +32,7 @@ import {
 import { Pet, PetGender, PetSpecies } from '../../types/pet';
 import { getPetAvatarSource } from '../../constants/petAvatars';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addPetStyles as styles } from './styles';
@@ -76,6 +80,10 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
   const [weight, setWeight] = useState(String(initialPet?.weight ?? 24));
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(initialPet?.weightUnit ?? 'lbs');
   const [photoUri, setPhotoUri] = useState<string | null>(initialPet?.photoUri ?? null);
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
+  const [photoChoiceOpen, setPhotoChoiceOpen] = useState(false);
+  const [photoProcessing, setPhotoProcessing] = useState(false);
+  const [cropEditorOpen, setCropEditorOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [breedOpen, setBreedOpen] = useState(false);
   const [error, setError] = useState('');
@@ -98,12 +106,30 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
+      allowsEditing: false,
+      quality: 1,
     });
 
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled) {
+      const selectedUri = result.assets[0].uri;
+      setPendingPhotoUri(selectedUri);
+      setPhotoChoiceOpen(true);
+    }
+  };
+
+  const saveCroppedPhoto = async (crop: { originX: number; originY: number; width: number; height: number }) => {
+    if (!pendingPhotoUri) return;
+    try {
+      setPhotoProcessing(true);
+      const result = await ImageManipulator.manipulateAsync(pendingPhotoUri, [{ crop }], { compress: 1, format: ImageManipulator.SaveFormat.JPEG });
+      setPhotoUri(result.uri);
+      setPendingPhotoUri(null);
+      setCropEditorOpen(false);
+    } catch {
+      Alert.alert('Unable to crop photo', 'Please try selecting the photo again.');
+    } finally {
+      setPhotoProcessing(false);
+    }
   };
 
   const save = () => {
@@ -111,6 +137,8 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
       setError('Please enter your pet’s name');
       return;
     }
+
+    const age = getAgeFromBirthDate(birthDate, birthDateEstimated, initialPet);
 
     onSave({
       id: initialPet?.id ?? '',
@@ -120,8 +148,8 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
       birthDate: birthDate.trim() || null,
       birthDateEstimated: Boolean(birthDate.trim() && birthDateEstimated),
       breed: (breed === 'Other' ? customBreed : breed).trim() || 'Companion Pet',
-      ageYears: initialPet?.ageYears ?? 0,
-      ageMonths: initialPet?.ageMonths ?? 0,
+      ageYears: age.years,
+      ageMonths: age.months,
       weight: Number.parseFloat(weight) || 10,
       weightUnit,
       photoUri,
@@ -149,10 +177,10 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
         </View>
 
         <View accessible accessibilityLabel="Pet photo section" style={styles.photoCard}>
-          <Image accessibilityLabel={photoUri ? 'Selected pet photo' : `${currentSpecies.label} default preview`} source={photoUri ? { uri: photoUri } : getPetAvatarSource(species)} style={styles.previewImage} />
+          <Image accessibilityLabel={photoUri ? 'Selected pet photo' : `${currentSpecies.label} default preview`} source={photoUri ? { uri: photoUri } : getPetAvatarSource(species)} resizeMode="contain" style={styles.previewImage} />
           <Pressable accessibilityRole="button" accessibilityLabel={photoUri ? 'Change pet photo' : 'Add pet photo'} onPress={pickPhoto} style={styles.photoButton}>
-            <Camera color="#557A63" size={21} strokeWidth={1.9} />
-            <Text style={styles.addPhotoText}>{photoUri ? 'Change & Crop Photo' : 'Add & Crop Photo'}</Text>
+            <Camera color="#557A63" size={20} strokeWidth={1.9} />
+            <Text style={styles.addPhotoText}>{photoUri ? 'Change Photo' : 'Choose Photo'}</Text>
           </Pressable>
           <Text style={styles.photoHint}>Choose a photo and crop it to a square</Text>
         </View>
@@ -177,7 +205,7 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
           <View style={styles.divider} />
           <View style={styles.fieldRow}>
             <View style={styles.greenBadge}><CalendarDays color="#557A63" size={20} strokeWidth={2} /></View>
-            <View style={styles.genderContent}><Text style={styles.fieldLabel}>Birth date <Text style={styles.optionalLabel}>(optional)</Text></Text><Pressable accessibilityRole="button" accessibilityLabel="Choose birth date" onPress={() => setBirthDatePickerOpen(true)} style={styles.dateValue}><Text style={[styles.fieldValue, !birthDate && styles.placeholderValue]}>{birthDate || 'Choose a date'}</Text></Pressable>{birthDatePickerOpen && <DateTimePicker value={parseBirthDate(birthDate)} mode="date" display="default" maximumDate={new Date()} onChange={(_, value) => { setBirthDatePickerOpen(false); if (value) setBirthDate(formatBirthDate(value)); }} />}</View><Pressable accessibilityRole="checkbox" accessibilityState={{ checked: birthDateEstimated, disabled: !birthDate }} disabled={!birthDate} onPress={() => setBirthDateEstimated((current) => !current)} style={[styles.estimatedButton, birthDateEstimated && styles.activeEstimated, !birthDate && styles.disabledEstimated]}><Text style={[styles.estimatedText, birthDateEstimated && styles.activeEstimatedText]}>Estimated</Text></Pressable>
+            <View style={styles.genderContent}><Text style={styles.fieldLabel}>{birthDateEstimated ? 'Birth month' : 'Birth date'} <Text style={styles.optionalLabel}>(optional)</Text></Text><Pressable accessibilityRole="button" accessibilityLabel={birthDateEstimated ? 'Choose birth month' : 'Choose birth date'} onPress={() => setBirthDatePickerOpen(true)} style={styles.dateValue}><Text style={[styles.fieldValue, !birthDate && styles.placeholderValue]}>{birthDate ? formatBirthDateForDisplay(birthDate, birthDateEstimated) : birthDateEstimated ? 'Choose a month' : 'Choose a date'}</Text></Pressable>{birthDatePickerOpen && <DateTimePicker value={parseBirthDate(birthDate)} mode="date" display="default" maximumDate={new Date()} onChange={(_, value) => { setBirthDatePickerOpen(false); if (value) setBirthDate(formatBirthDate(value)); }} />}</View><Pressable accessibilityRole="checkbox" accessibilityState={{ checked: birthDateEstimated }} onPress={() => { if (!birthDate) setBirthDatePickerOpen(true); setBirthDateEstimated((current) => !current); }} style={[styles.estimatedButton, birthDateEstimated && styles.activeEstimated]}><Text style={[styles.estimatedText, birthDateEstimated && styles.activeEstimatedText]}>Estimated</Text></Pressable>
           </View>
 
           <View style={styles.divider} />
@@ -264,6 +292,21 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
           <Pressable accessibilityRole="button" onPress={onBack} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable>
         </View>
       </ScrollView>
+      <Modal visible={photoChoiceOpen} animationType="fade" transparent onRequestClose={() => { setPhotoChoiceOpen(false); setPendingPhotoUri(null); }}>
+        <View style={styles.photoModalBackdrop}>
+          <View style={styles.photoModal}>
+            <Text style={styles.photoModalTitle}>How should we use this photo?</Text>
+            <Text style={styles.photoModalSubtitle}>Keep the full image or crop it to a square.</Text>
+            {pendingPhotoUri && <Image source={{ uri: pendingPhotoUri }} resizeMode="contain" style={styles.photoModalPreview} />}
+            <View style={styles.photoModalActions}>
+              <Pressable onPress={() => { setPhotoUri(pendingPhotoUri); setPendingPhotoUri(null); setPhotoChoiceOpen(false); }} style={styles.photoModalFullButton}><Text style={styles.photoModalFullText}>Use Full Photo</Text></Pressable>
+              <Pressable disabled={photoProcessing} onPress={() => { setPhotoChoiceOpen(false); setCropEditorOpen(true); }} style={[styles.photoModalCropButton, photoProcessing && styles.photoModalDisabled]}><Crop color="#FFFFFF" size={18} /><Text style={styles.photoModalCropText}>Crop Photo</Text></Pressable>
+            </View>
+            <Pressable onPress={() => { setPhotoChoiceOpen(false); setPendingPhotoUri(null); }} style={styles.photoModalCancel}><Text style={styles.photoModalCancelText}>Choose Another</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
+      {pendingPhotoUri && <PhotoCropEditor visible={cropEditorOpen} uri={pendingPhotoUri} saving={photoProcessing} onCancel={() => setCropEditorOpen(false)} onSave={saveCroppedPhoto} />}
     </KeyboardAvoidingView>
   );
 }
@@ -274,6 +317,114 @@ function parseBirthDate(value: string) {
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
+function getImageDimensions(uri: string) {
+  return new Promise<{ width: number; height: number }>((resolve, reject) => {
+    Image.getSize(uri, (width, height) => resolve({ width, height }), reject);
+  });
+}
+
+type CropRect = { originX: number; originY: number; width: number; height: number };
+type CropEditorProps = { visible: boolean; uri: string; saving: boolean; onCancel: () => void; onSave: (crop: CropRect) => Promise<void> };
+const CROP_FRAME_SIZE = 300;
+
+function PhotoCropEditor({ visible, uri, saving, onCancel, onSave }: CropEditorProps) {
+  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const imageSizeRef = useRef(imageSize);
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  const panStartRef = useRef(pan);
+
+  useEffect(() => {
+    let active = true;
+    setImageSize(null);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    getImageDimensions(uri).then((size) => { if (active) setImageSize(size); }).catch(() => { if (active) setImageSize(null); });
+    return () => { active = false; };
+  }, [uri]);
+
+  useEffect(() => { imageSizeRef.current = imageSize; }, [imageSize]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = pan; }, [pan]);
+
+  const getBounds = (nextZoom = zoomRef.current) => {
+    const size = imageSizeRef.current;
+    if (!size) return { x: 0, y: 0 };
+    const scale = Math.max(CROP_FRAME_SIZE / size.width, CROP_FRAME_SIZE / size.height) * nextZoom;
+    return { x: Math.max(0, (size.width * scale - CROP_FRAME_SIZE) / 2), y: Math.max(0, (size.height * scale - CROP_FRAME_SIZE) / 2) };
+  };
+
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => { panStartRef.current = panRef.current; },
+    onPanResponderMove: (_, gesture) => {
+      const bounds = getBounds();
+      setPan({ x: Math.max(-bounds.x, Math.min(bounds.x, panStartRef.current.x + gesture.dx)), y: Math.max(-bounds.y, Math.min(bounds.y, panStartRef.current.y + gesture.dy)) });
+    },
+  })).current;
+
+  const changeZoom = (amount: number) => {
+    const nextZoom = Math.max(0.75, Math.min(3, Number((zoomRef.current + amount).toFixed(2))));
+    const bounds = getBounds(nextZoom);
+    setZoom(nextZoom);
+    setPan((current) => ({ x: Math.max(-bounds.x, Math.min(bounds.x, current.x)), y: Math.max(-bounds.y, Math.min(bounds.y, current.y)) }));
+  };
+
+  const save = () => {
+    const size = imageSizeRef.current;
+    if (!size) return;
+    const scale = Math.max(CROP_FRAME_SIZE / size.width, CROP_FRAME_SIZE / size.height) * zoomRef.current;
+    const imageLeft = (CROP_FRAME_SIZE - size.width * scale) / 2 + panRef.current.x;
+    const imageTop = (CROP_FRAME_SIZE - size.height * scale) / 2 + panRef.current.y;
+    const cropSize = CROP_FRAME_SIZE / scale;
+    const originX = Math.max(0, Math.min(size.width, -imageLeft / scale));
+    const originY = Math.max(0, Math.min(size.height, -imageTop / scale));
+    onSave({ originX, originY, width: Math.min(cropSize, size.width - originX), height: Math.min(cropSize, size.height - originY) });
+  };
+
+  const scale = imageSize ? Math.max(CROP_FRAME_SIZE / imageSize.width, CROP_FRAME_SIZE / imageSize.height) * zoom : 1;
+  const imageWidth = imageSize ? imageSize.width * scale : CROP_FRAME_SIZE;
+  const imageHeight = imageSize ? imageSize.height * scale : CROP_FRAME_SIZE;
+
+  return <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
+    <View style={styles.cropEditorScreen}>
+      <View style={styles.cropEditorHeader}><Pressable onPress={onCancel}><Text style={styles.cropEditorCancel}>Cancel</Text></Pressable><Text style={styles.cropEditorTitle}>Crop Photo</Text><Pressable disabled={!imageSize || saving} onPress={save}><Text style={[styles.cropEditorDone, (!imageSize || saving) && styles.cropEditorDisabled]}>{saving ? 'Saving…' : 'Done'}</Text></Pressable></View>
+      <View style={styles.cropWorkspace} {...panResponder.panHandlers}>
+        {imageSize && <Image source={{ uri }} resizeMode="stretch" style={{ height: imageHeight, left: (CROP_FRAME_SIZE - imageWidth) / 2 + pan.x, position: 'absolute', top: (CROP_FRAME_SIZE - imageHeight) / 2 + pan.y, width: imageWidth }} />}
+        <View pointerEvents="none" style={styles.cropShadeTop} /><View pointerEvents="none" style={styles.cropShadeBottom} /><View pointerEvents="none" style={styles.cropShadeLeft} /><View pointerEvents="none" style={styles.cropShadeRight} /><View pointerEvents="none" style={styles.cropFrame} />
+        {!imageSize && <Text style={styles.cropLoading}>Loading photo…</Text>}
+      </View>
+      <Text style={styles.cropHint}>Drag the photo to position it inside the square.</Text>
+      <View style={styles.cropZoomControls}><Pressable onPress={() => changeZoom(-0.25)} style={styles.cropZoomButton}><Text style={styles.cropZoomText}>−</Text></Pressable><Text style={styles.cropZoomLabel}>Zoom {Math.round(zoom * 100)}%</Text><Pressable onPress={() => changeZoom(0.25)} style={styles.cropZoomButton}><Text style={styles.cropZoomText}>+</Text></Pressable></View>
+    </View>
+  </Modal>;
+}
+
 function formatBirthDate(value: Date) {
-  return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatBirthDateForDisplay(value: string, estimated: boolean) {
+  const date = parseBirthDate(value);
+  return date.toLocaleDateString('en-US', estimated
+    ? { month: 'long', year: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getAgeFromBirthDate(value: string, estimated: boolean, initialPet?: Pet) {
+  const birthDate = value ? parseBirthDate(value) : null;
+  if (!birthDate || Number.isNaN(birthDate.getTime())) {
+    return { years: initialPet?.ageYears ?? 0, months: initialPet?.ageMonths ?? 0 };
+  }
+
+  const now = new Date();
+  let months = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
+  if (!estimated && now.getDate() < birthDate.getDate()) months -= 1;
+  months = Math.max(0, months);
+  return { years: Math.floor(months / 12), months: months % 12 };
 }

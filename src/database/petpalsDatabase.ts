@@ -101,6 +101,9 @@ export async function initializeDatabase(db: SQLiteDatabase) {
     // Existing databases already have the column.
   }
 
+  // Remove the original demo pets from databases created before demo data was removed.
+  await db.runAsync("DELETE FROM pets WHERE id IN ('pet-1', 'pet-2')");
+
   const existing = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM pets');
   if ((existing?.count ?? 0) > 0) return;
 
@@ -112,7 +115,10 @@ export async function initializeDatabase(db: SQLiteDatabase) {
 
 export async function getPets(db: SQLiteDatabase): Promise<Pet[]> {
   const cache = getCache(db);
-  if (cache.pets) return cache.pets;
+  if (cache.pets) {
+    cache.pets = cache.pets.map(refreshPetAge);
+    return cache.pets;
+  }
   if (cache.petsPromise) return cache.petsPromise;
 
   const request = db.getAllAsync<PetRow>('SELECT * FROM pets ORDER BY name COLLATE NOCASE')
@@ -129,7 +135,7 @@ export async function getPets(db: SQLiteDatabase): Promise<Pet[]> {
 export async function getPet(db: SQLiteDatabase, id: string) {
   const cachedPets = getCache(db).pets;
   const cachedPet = cachedPets?.find((pet) => pet.id === id);
-  if (cachedPet) return cachedPet;
+  if (cachedPet) return refreshPetAge(cachedPet);
 
   const row = await db.getFirstAsync<PetRow>('SELECT * FROM pets WHERE id = ?', id);
   return row ? toPet(row) : undefined;
@@ -253,7 +259,27 @@ async function insertCareLog(db: SQLiteDatabase, log: CareLog) {
 }
 
 function toPet(row: PetRow): Pet {
-  return { id: row.id, name: row.name, species: row.species, gender: row.gender ?? 'unknown', birthDate: row.birth_date ?? null, birthDateEstimated: Boolean(row.birth_date_estimated), breed: row.breed, ageYears: row.age_years, ageMonths: row.age_months, weight: row.weight, weightUnit: row.weight_unit, photoUri: row.photo_uri ?? null, avatar: row.avatar };
+  const birthDate = row.birth_date ?? null;
+  const birthDateEstimated = Boolean(row.birth_date_estimated);
+  const age = getAgeFromBirthDate(birthDate, birthDateEstimated) ?? { years: row.age_years, months: row.age_months };
+  return { id: row.id, name: row.name, species: row.species, gender: row.gender ?? 'unknown', birthDate, birthDateEstimated, breed: row.breed, ageYears: age.years, ageMonths: age.months, weight: row.weight, weightUnit: row.weight_unit, photoUri: row.photo_uri ?? null, avatar: row.avatar };
+}
+
+function refreshPetAge(pet: Pet): Pet {
+  const age = getAgeFromBirthDate(pet.birthDate, pet.birthDateEstimated);
+  return age ? { ...pet, ageYears: age.years, ageMonths: age.months } : pet;
+}
+
+function getAgeFromBirthDate(value?: string | null, estimated = false) {
+  if (!value) return undefined;
+  const birthDate = new Date(value);
+  if (Number.isNaN(birthDate.getTime())) return undefined;
+
+  const now = new Date();
+  let totalMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + now.getMonth() - birthDate.getMonth();
+  if (!estimated && now.getDate() < birthDate.getDate()) totalMonths -= 1;
+  totalMonths = Math.max(0, totalMonths);
+  return { years: Math.floor(totalMonths / 12), months: totalMonths % 12 };
 }
 
 function toCareLog(row: CareLogRow): CareLog {

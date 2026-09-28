@@ -9,9 +9,9 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { Pet } from '../../types/pet';
 import { getPetAvatarSource } from '../../constants/petAvatars';
 
-type Props = { onOpenAddPet: () => void; onOpenPet?: (pet: Pet) => void; onOpenCalendar?: () => void };
+type Props = { onOpenAddPet: () => void; onOpenPet?: (pet: Pet) => void; onOpenCalendar?: (pet: Pet) => void; onPetsChanged?: () => void };
 
-export function PetListScreen({ onOpenAddPet, onOpenPet, onOpenCalendar }: Props) {
+export function PetListScreen({ onOpenAddPet, onOpenPet, onOpenCalendar, onPetsChanged }: Props) {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const [pets, setPets] = useState<Pet[]>([]);
@@ -35,6 +35,7 @@ export function PetListScreen({ onOpenAddPet, onOpenPet, onOpenCalendar }: Props
       await deletePet(db, pet.id);
       setPets((current) => current.filter((item) => item.id !== pet.id));
       setSelectedPetId((current) => current === pet.id ? '' : current);
+      onPetsChanged?.();
     } },
   ]);
 
@@ -49,7 +50,7 @@ export function PetListScreen({ onOpenAddPet, onOpenPet, onOpenCalendar }: Props
 
 function PetCard({ pet, index, selected, onPress, onCalendar, onDelete }: { pet: Pet; index: number; selected: boolean; onPress: () => void; onCalendar?: () => void; onDelete: () => void }) {
   const palette = index % 3 === 1 ? { card: '#FCF9F3', border: '#EFE9DC', ring: '#ECC788', badge: '#DFA54D', calendar: '#F3EAD8', health: '#EFECE3' } : index % 3 === 2 ? { card: '#FBF5F4', border: '#EFE4E1', ring: '#D9B7B5', badge: '#A46566', calendar: '#F5E6E4', health: '#EDE6E6' } : { card: '#F8FAF7', border: '#E7EFE9', ring: '#BBD3C3', badge: '#476351', calendar: '#E5EFE7', health: '#EAEFEA' };
-  return <View style={[styles.petCard, { backgroundColor: palette.card, borderColor: palette.border }, selected && styles.petCardSelected]}><Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} onLongPress={onDelete} style={styles.cardTop}><View style={[styles.avatarFrame, { borderColor: palette.ring }]}><Image source={getPetAvatarSource(pet.species, pet.photoUri)} style={styles.petImage} /><View style={[styles.petBadge, { backgroundColor: palette.badge }]}>{index % 3 === 2 ? <Heart color="#FFFFFF" fill="#FFFFFF" size={13} /> : <PawPrint color="#FFFFFF" fill="#FFFFFF" size={13} />}</View></View><View style={styles.petDetails}><View style={styles.petTitleRow}><Text numberOfLines={1} style={styles.petName}>{pet.name}</Text><ChevronRight color="#9B9D96" size={17} strokeWidth={2.5} /></View><Text numberOfLines={1} style={styles.breed}>{pet.breed}</Text><View style={styles.metrics}><View style={styles.metric}><CalendarDays color="#737F76" size={15} /><Text style={styles.metricText}>{pet.ageYears}y {pet.ageMonths}m</Text></View><View style={styles.metric}><Weight color="#737F76" size={15} /><Text style={styles.metricText}>{pet.weight} {pet.weightUnit}</Text></View></View></View></Pressable><View style={styles.cardActions}><Pressable accessibilityRole="button" onPress={onCalendar} style={[styles.actionButton, { backgroundColor: palette.calendar }]}><CalendarDays color="#506C59" size={14} /><Text style={styles.actionText}>Calendar</Text></Pressable><Pressable accessibilityRole="button" onPress={onPress} style={[styles.actionButton, { backgroundColor: palette.health }]}><CheckCircle2 color="#69766D" size={14} /><Text style={styles.actionText}>Health &amp; Notes</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Delete ${pet.name}`} onPress={onDelete} style={styles.deleteButton}><Trash2 color="#D96B6B" size={16} /></Pressable></View></View>;
+  return <View style={[styles.petCard, { backgroundColor: palette.card, borderColor: palette.border }, selected && styles.petCardSelected]}><Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} onLongPress={onDelete} style={styles.cardTop}><View style={[styles.avatarFrame, { borderColor: palette.ring }]}><Image source={getPetAvatarSource(pet.species, pet.photoUri)} style={styles.petImage} /><View style={[styles.petBadge, { backgroundColor: palette.badge }]}>{index % 3 === 2 ? <Heart color="#FFFFFF" fill="#FFFFFF" size={13} /> : <PawPrint color="#FFFFFF" fill="#FFFFFF" size={13} />}</View></View><View style={styles.petDetails}><View style={styles.petTitleRow}><Text numberOfLines={1} style={styles.petName}>{pet.name}</Text><ChevronRight color="#9B9D96" size={17} strokeWidth={2.5} /></View><Text numberOfLines={1} style={styles.breed}>{pet.breed}</Text><View style={styles.metrics}><View style={styles.metric}><CalendarDays color="#737F76" size={15} /><Text style={styles.metricText}>{pet.ageYears}y {pet.ageMonths}m</Text></View><View style={styles.metric}><Weight color="#737F76" size={15} /><Text style={styles.metricText}>{pet.weight} {pet.weightUnit}</Text></View></View></View></Pressable><View style={styles.cardActions}><Pressable accessibilityRole="button" accessibilityLabel={`Open ${pet.name}'s calendar`} onPress={() => onCalendar?.(pet)} style={[styles.actionButton, { backgroundColor: palette.calendar }]}><CalendarDays color="#506C59" size={14} /><Text style={styles.actionText}>Calendar</Text></Pressable><Pressable accessibilityRole="button" onPress={onPress} style={[styles.actionButton, { backgroundColor: palette.health }]}><CheckCircle2 color="#69766D" size={14} /><Text style={styles.actionText}>Health &amp; Notes</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Delete ${pet.name}`} onPress={onDelete} style={styles.deleteButton}><Trash2 color="#D96B6B" size={16} /></Pressable></View></View>;
 }
 
 const styles = StyleSheet.create({

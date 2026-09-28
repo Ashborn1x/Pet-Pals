@@ -5,6 +5,7 @@ import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { addCareLog, deleteCareLog, getCareLogs, getPets } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import type { CareLog, Pet } from '../../types/pet';
 
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -13,6 +14,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 type ScheduleType = 'vet' | 'vaccine';
 
 export function CalendarScreen() {
+  const { petId } = useLocalSearchParams<{ petId?: string }>();
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const today = new Date();
@@ -21,7 +23,7 @@ export function CalendarScreen() {
   const [dataLoading, setDataLoading] = useState(true);
   const [month, setMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDay, setSelectedDay] = useState(today.getDate());
-  const [companion, setCompanion] = useState('all');
+  const [companion, setCompanion] = useState(typeof petId === 'string' && petId ? petId : 'all');
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleType, setScheduleType] = useState<ScheduleType>('vet');
   const [schedulePetId, setSchedulePetId] = useState('');
@@ -43,6 +45,7 @@ export function CalendarScreen() {
       .then(([nextPets, nextLogs]) => { setPets(nextPets); setLogs(nextLogs); setSchedulePetId((current) => current || nextPets[0]?.id || ''); })
       .finally(() => setDataLoading(false));
   }, [db]);
+  useEffect(() => { setCompanion(typeof petId === 'string' && petId ? petId : 'all'); }, [petId]);
 
   if (dataLoading) return <SkeletonScreen variant="calendar" />;
 
@@ -108,7 +111,7 @@ export function CalendarScreen() {
         </View>
 
         <View style={styles.filterCard}>
-          <View style={styles.filterHeader}><Text style={styles.filterTitle}>FILTER COMPANION</Text><Text style={styles.allMembers}>All Pack Members</Text></View>
+          <View style={styles.filterHeader}><Text style={styles.filterTitle}>FILTER COMPANION</Text><Text style={styles.allMembers}>{companion === 'all' ? 'All Pack Members' : pets.find((pet) => pet.id === companion)?.name ?? 'All Pack Members'}</Text></View>
           <View style={styles.companionRow}>
             <CompanionButton label="All" subtitle="2 Companions" active={companion === 'all'} onPress={() => setCompanion('all')} />
             {pets.map((pet) => <CompanionButton key={pet.id} label={pet.name} subtitle={`${logs.filter((log) => log.petId === pet.id).length} Tasks`} active={companion === pet.id} onPress={() => setCompanion(pet.id)} />)}
