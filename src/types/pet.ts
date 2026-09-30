@@ -29,6 +29,7 @@ export type CareLog = {
   time: string;
   date: string;
   completed: boolean;
+  notify?: boolean;
 };
 
 export type PetPhoto = {

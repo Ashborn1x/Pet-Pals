@@ -26,6 +26,7 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
   const [draftDetail, setDraftDetail] = useState('');
   const [draftTime, setDraftTime] = useState('08:00 AM');
   const [draftDate, setDraftDate] = useState('Today');
+  const [draftNotify, setDraftNotify] = useState(false);
 
   useEffect(() => {
     Promise.all([petId ? getPet(db, petId) : Promise.resolve(undefined), getCareLogs(db), petId ? getPetPhotos(db, petId) : Promise.resolve([])])
@@ -57,6 +58,7 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
     setDraftDetail('');
     setDraftTime(formatCurrentTime());
     setDraftDate('Today');
+    setDraftNotify(false);
   };
 
   const openEdit = (log: CareLog) => {
@@ -66,6 +68,7 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
     setDraftDetail(log.detail);
     setDraftTime(log.time);
     setDraftDate(log.date);
+    setDraftNotify(Boolean(log.notify));
   };
 
   const saveEntry = async () => {
@@ -73,8 +76,8 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
     const time = draftTime.trim() || formatCurrentTime();
     if (editingLog) {
       const date = addType === 'health' ? (draftDate.trim() || 'Today') : editingLog.date;
-      await updateCareLogDetails(db, editingLog.id, draftTitle.trim(), draftDetail.trim() || 'Added from pet profile', addType === 'health' ? '—' : time, date);
-      setLogs((current) => current.map((log) => log.id === editingLog.id ? { ...log, title: draftTitle.trim(), detail: draftDetail.trim() || 'Added from pet profile', time: addType === 'health' ? '—' : time, date } : log));
+      await updateCareLogDetails(db, editingLog.id, draftTitle.trim(), draftDetail.trim() || 'Added from pet profile', addType === 'health' ? '—' : time, date, draftNotify);
+      setLogs((current) => current.map((log) => log.id === editingLog.id ? { ...log, title: draftTitle.trim(), detail: draftDetail.trim() || 'Added from pet profile', time: addType === 'health' ? '—' : time, date, notify: draftNotify } : log));
       setAddType(undefined);
       setEditingLog(undefined);
       return;
@@ -82,7 +85,7 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
     const type = addType === 'activity' ? 'walk' : addType === 'meal' ? 'meal' : 'vet';
     const log = await addCareLog(db, {
       petId: pet.id, type, title: draftTitle.trim(), detail: draftDetail.trim() || 'Added from pet profile',
-      time: addType === 'health' ? '—' : time, date: addType === 'health' ? (draftDate.trim() || 'Today') : 'Today', completed: false,
+      time: addType === 'health' ? '—' : time, date: addType === 'health' ? (draftDate.trim() || 'Today') : 'Today', completed: false, notify: addType !== 'health' && draftNotify,
     });
     setLogs((current) => [log, ...current]);
     setAddType(undefined);
@@ -98,15 +101,20 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
 
   const addPhoto = async () => {
     if (!pet) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow photo access to add a gallery photo.');
-      return;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted && permission.accessPrivileges !== 'limited') {
+        Alert.alert('Photo access needed', 'Allow photo access to add a gallery photo.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', allowsEditing: false, allowsMultipleSelection: true, selectionLimit: 0, quality: 1 });
+      if (result.canceled || !result.assets?.length) return;
+      const newPhotos = await Promise.all(result.assets.map((asset) => addPetPhoto(db, pet.id, asset.uri)));
+      setPhotos((current) => [...newPhotos.reverse(), ...current]);
+    } catch (error) {
+      console.error('Unable to add gallery photos', error);
+      Alert.alert('Unable to add photos', 'Please select the photos again and try once more.');
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, allowsMultipleSelection: true, selectionLimit: 0, quality: 1 });
-    if (result.canceled) return;
-    const newPhotos = await Promise.all(result.assets.map((asset) => addPetPhoto(db, pet.id, asset.uri)));
-    setPhotos((current) => [...newPhotos.reverse(), ...current]);
   };
 
   const removePhoto = (photo: PetPhoto) => {
@@ -126,9 +134,10 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
           <Svg pointerEvents="none" style={styles.heroFade} viewBox="0 0 100 100" preserveAspectRatio="none">
             <Defs>
               <SvgLinearGradient id="petProfileHeroFade" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" />
-                <Stop offset="0.72" stopColor="#FFFFFF" stopOpacity="0.72" />
-                <Stop offset="1" stopColor="#FFFFFF" stopOpacity="1" />
+                <Stop offset="0" stopColor="#F9F5EE" stopOpacity="0" />
+                <Stop offset="0.58" stopColor="#F9F5EE" stopOpacity="0.68" />
+                <Stop offset="0.84" stopColor="#F9F5EE" stopOpacity="0.92" />
+                <Stop offset="1" stopColor="#F9F5EE" stopOpacity="1" />
               </SvgLinearGradient>
             </Defs>
             <Rect x="0" y="0" width="100" height="100" fill="url(#petProfileHeroFade)" />
@@ -159,7 +168,7 @@ export function PetProfileScreen({ petId, onBack, onEditPet }: Props) {
           {activeTab === 'gallery' && <GalleryPanel photos={photos} onAdd={addPhoto} onDelete={removePhoto} />}
         </View>
       </ScrollView>
-      <EntryModal type={addType} editing={Boolean(editingLog)} title={draftTitle} detail={draftDetail} time={draftTime} date={draftDate} onChangeTitle={setDraftTitle} onChangeDetail={setDraftDetail} onChangeTime={setDraftTime} onChangeDate={setDraftDate} onClose={() => { setAddType(undefined); setEditingLog(undefined); }} onDelete={removeEntry} onSave={saveEntry} />
+      <EntryModal type={addType} editing={Boolean(editingLog)} title={draftTitle} detail={draftDetail} time={draftTime} date={draftDate} notify={draftNotify} onChangeTitle={setDraftTitle} onChangeDetail={setDraftDetail} onChangeTime={setDraftTime} onChangeDate={setDraftDate} onChangeNotify={setDraftNotify} onClose={() => { setAddType(undefined); setEditingLog(undefined); }} onDelete={removeEntry} onSave={saveEntry} />
     </View>
   );
 }
@@ -220,15 +229,25 @@ function HealthPanel({ logs, onAdd }: { logs: CareLog[]; onAdd: () => void }) {
 }
 
 function GalleryPanel({ photos, onAdd, onDelete }: { photos: PetPhoto[]; onAdd: () => void; onDelete: (photo: PetPhoto) => void }) {
-  return <View style={styles.panelStack}><SectionHeader label={`${photos.length} PHOTOS`} action="Add Photos" onPress={onAdd} />{photos.length ? <View style={styles.galleryGrid}>{photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel="Remove gallery photo" onLongPress={() => onDelete(photo)}><Image source={{ uri: photo.uri }} resizeMode="contain" style={styles.galleryImage} /></Pressable>)}</View> : <View style={styles.emptyGallery}><ImagePlus color="#D2B28A" size={28} /><Text style={styles.emptyGalleryTitle}>No photos yet</Text><Text style={styles.emptyGalleryText}>Add photos to keep your pet&apos;s memories here.</Text></View>}</View>;
+  return <View style={styles.panelStack}>
+    <View style={styles.sectionHeader}>
+      <View style={styles.galleryHeaderLabel}><ImagePlus color="#8A9B8F" size={14} /><Text style={styles.sectionLabel}>{photos.length} PHOTOS</Text></View>
+      <Pressable accessibilityRole="button" onPress={onAdd} style={styles.sectionActionButton}><Plus color="#2E5B42" size={14} strokeWidth={2.5} /><Text style={styles.sectionAction}>Add Photos</Text></Pressable>
+    </View>
+    {photos.length ? <>
+      <View style={styles.galleryGrid}>
+        {photos.map((photo) => <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel="Remove gallery photo" onLongPress={() => onDelete(photo)} style={styles.galleryTile}><Image source={{ uri: photo.uri }} resizeMode="cover" style={styles.galleryImage} /></Pressable>)}
+      </View>
+    </> : <View style={styles.emptyGallery}><ImagePlus color="#D2B28A" size={28} /><Text style={styles.emptyGalleryTitle}>No photos yet</Text><Text style={styles.emptyGalleryText}>Add photos to keep your pet&apos;s memories here.</Text></View>}
+  </View>;
 }
 
-function EntryModal({ type, editing, title, detail, time, date, onChangeTitle, onChangeDetail, onChangeTime, onChangeDate, onClose, onDelete, onSave }: { type?: 'activity' | 'meal' | 'health'; editing: boolean; title: string; detail: string; time: string; date: string; onChangeTitle: (value: string) => void; onChangeDetail: (value: string) => void; onChangeTime: (value: string) => void; onChangeDate: (value: string) => void; onClose: () => void; onDelete: () => void; onSave: () => void }) {
+function EntryModal({ type, editing, title, detail, time, date, notify, onChangeTitle, onChangeDetail, onChangeTime, onChangeDate, onChangeNotify, onClose, onDelete, onSave }: { type?: 'activity' | 'meal' | 'health'; editing: boolean; title: string; detail: string; time: string; date: string; notify: boolean; onChangeTitle: (value: string) => void; onChangeDetail: (value: string) => void; onChangeTime: (value: string) => void; onChangeDate: (value: string) => void; onChangeNotify: (value: boolean) => void; onClose: () => void; onDelete: () => void; onSave: () => void }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const label = type === 'activity' ? 'Add Activity' : type === 'meal' ? 'Add Meal' : 'Add Health History';
   const selected = parseTime(time);
   const setPart = (part: 'hour' | 'minute' | 'period', value: string) => onChangeTime(formatTime(part === 'hour' ? value : selected.hour, part === 'minute' ? value : selected.minute, part === 'period' ? value : selected.period));
-  return <Modal animationType="slide" transparent visible={Boolean(type)} onRequestClose={onClose}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}><View style={styles.modalCard}><View style={styles.modalHeading}><Text style={styles.modalTitle}>{editing ? `Edit ${type === 'meal' ? 'Meal' : type === 'activity' ? 'Activity' : 'Health History'}` : label}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.modalClose}><Text style={styles.modalCloseText}>×</Text></Pressable></View><Text style={styles.modalLabel}>Name</Text><TextInput autoFocus accessibilityLabel="Entry title" value={title} onChangeText={onChangeTitle} placeholder="Title" placeholderTextColor="#9AA69D" style={styles.modalInput} />{type === 'health' ? <><Text style={styles.modalLabel}>Date</Text><Pressable accessibilityRole="button" accessibilityLabel="Choose health history date" onPress={() => setShowDatePicker(true)} style={styles.dateButton}><Text style={styles.dateButtonText}>{date || 'Choose a date'}</Text><Text style={styles.dateButtonIcon}>⌄</Text></Pressable>{showDatePicker && <DateTimePicker value={parseDate(date)} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'} onChange={(_, selectedDate) => { if (Platform.OS !== 'ios') setShowDatePicker(false); if (selectedDate) onChangeDate(formatDate(selectedDate)); }} /> }<Text style={styles.modalHint}>Health history uses a date only.</Text></> : <><Text style={styles.modalLabel}>Time</Text><View style={styles.timePicker}><TimeWheel values={HOURS} selected={selected.hour} onSelect={(value) => setPart('hour', value)} /><Text style={styles.timeColon}>:</Text><TimeWheel values={MINUTES} selected={selected.minute} onSelect={(value) => setPart('minute', value)} /><TimeWheel values={PERIODS} selected={selected.period} onSelect={(value) => setPart('period', value)} /></View><Text style={styles.modalHint}>Scroll to change the time.</Text></>}<TextInput accessibilityLabel="Entry details" value={detail} onChangeText={onChangeDetail} placeholder="Details (optional)" placeholderTextColor="#9AA69D" style={[styles.modalInput, styles.modalDetailInput]} multiline /><View style={styles.modalActions}>{editing && <Pressable onPress={onDelete} style={styles.modalDelete}><Trash2 color="#B9553E" size={15} /><Text style={styles.modalDeleteText}>Delete</Text></Pressable>}<Pressable onPress={onClose} style={styles.modalCancel}><Text style={styles.modalCancelText}>Cancel</Text></Pressable><Pressable disabled={!title.trim()} onPress={onSave} style={[styles.modalSave, !title.trim() && styles.modalSaveDisabled]}><Text style={styles.modalSaveText}>Save</Text></Pressable></View></View></KeyboardAvoidingView></Modal>;
+  return <Modal animationType="slide" transparent visible={Boolean(type)} onRequestClose={onClose}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}><View style={styles.modalCard}><View style={styles.modalHeading}><Text style={styles.modalTitle}>{editing ? `Edit ${type === 'meal' ? 'Meal' : type === 'activity' ? 'Activity' : 'Health History'}` : label}</Text><Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.modalClose}><Text style={styles.modalCloseText}>×</Text></Pressable></View><Text style={styles.modalLabel}>Name</Text><TextInput autoFocus accessibilityLabel="Entry title" value={title} onChangeText={onChangeTitle} placeholder="Title" placeholderTextColor="#9AA69D" style={styles.modalInput} />{type === 'health' ? <><Text style={styles.modalLabel}>Date</Text><Pressable accessibilityRole="button" accessibilityLabel="Choose health history date" onPress={() => setShowDatePicker(true)} style={styles.dateButton}><Text style={styles.dateButtonText}>{date || 'Choose a date'}</Text><Text style={styles.dateButtonIcon}>⌄</Text></Pressable>{showDatePicker && <DateTimePicker value={parseDate(date)} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'} onChange={(_, selectedDate) => { if (Platform.OS !== 'ios') setShowDatePicker(false); if (selectedDate) onChangeDate(formatDate(selectedDate)); }} /> }<Text style={styles.modalHint}>Health history uses a date only.</Text></> : <><Text style={styles.modalLabel}>Time</Text><View style={styles.timePicker}><TimeWheel values={HOURS} selected={selected.hour} onSelect={(value) => setPart('hour', value)} /><Text style={styles.timeColon}>:</Text><TimeWheel values={MINUTES} selected={selected.minute} onSelect={(value) => setPart('minute', value)} /><TimeWheel values={PERIODS} selected={selected.period} onSelect={(value) => setPart('period', value)} /></View><Text style={styles.modalHint}>Scroll to change the time.</Text></>}{type !== 'health' && <Pressable accessibilityRole="switch" accessibilityState={{ checked: notify }} onPress={() => onChangeNotify(!notify)} style={[styles.notifyOption, notify && styles.notifyOptionActive]}><Bell color={notify ? '#2E5B42' : '#7D8F82'} size={15} /><Text style={[styles.notifyOptionText, notify && styles.notifyOptionTextActive]}>{notify ? 'Notify me about this' : 'No notification'}</Text><View style={[styles.notifyToggle, notify && styles.notifyToggleActive]}><View style={[styles.notifyToggleThumb, notify && styles.notifyToggleThumbActive]} /></View></Pressable>}<TextInput accessibilityLabel="Entry details" value={detail} onChangeText={onChangeDetail} placeholder="Details (optional)" placeholderTextColor="#9AA69D" style={[styles.modalInput, styles.modalDetailInput]} multiline /><View style={styles.modalActions}>{editing && <Pressable onPress={onDelete} style={styles.modalDelete}><Trash2 color="#B9553E" size={15} /><Text style={styles.modalDeleteText}>Delete</Text></Pressable>}<Pressable onPress={onClose} style={styles.modalCancel}><Text style={styles.modalCancelText}>Cancel</Text></Pressable><Pressable disabled={!title.trim()} onPress={onSave} style={[styles.modalSave, !title.trim() && styles.modalSaveDisabled]}><Text style={styles.modalSaveText}>Save</Text></Pressable></View></View></KeyboardAvoidingView></Modal>;
 }
 
 const HOURS = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'));
@@ -279,11 +298,11 @@ function TimeWheel({ values, selected, onSelect }: { values: string[]; selected:
 const TIME_ITEM_HEIGHT = 30;
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#FFFFFF', flex: 1 },
+  screen: { backgroundColor: '#F9F5EE', flex: 1 },
   scrollContent: { paddingBottom: 120 },
   hero: { backgroundColor: '#EAE5DA', height: 350, overflow: 'hidden', position: 'relative' },
   heroImage: { height: '100%', width: '100%' },
-  heroFade: { bottom: 0, height: 150, left: 0, position: 'absolute', right: 0 },
+  heroFade: { bottom: 0, height: 170, left: 0, position: 'absolute', right: 0 },
   heroActions: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', left: 16, position: 'absolute', right: 16, top: 16 },
   heroRightActions: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   heroButton: { alignItems: 'center', backgroundColor: '#1A261EE8', borderRadius: 20, elevation: 3, height: 40, justifyContent: 'center', shadowColor: '#000000', shadowOpacity: 0.15, shadowRadius: 6, width: 40 },
@@ -293,7 +312,7 @@ const styles = StyleSheet.create({
   heroNameBlock: { flex: 1 },
   heroName: { color: '#111A13', fontSize: 28, fontWeight: '900', letterSpacing: -0.6, lineHeight: 32 },
   heroBreed: { color: '#4A5E50', fontSize: 13.5, fontWeight: '600', marginTop: 3 },
-  contentSection: { alignSelf: 'center', backgroundColor: '#FFFFFF', maxWidth: 560, minHeight: 420, paddingBottom: 30, paddingHorizontal: 20, paddingTop: 8, width: '100%' },
+  contentSection: { alignSelf: 'center', backgroundColor: '#F9F5EE', maxWidth: 560, minHeight: 420, paddingBottom: 30, paddingHorizontal: 20, paddingTop: 8, width: '100%' },
   segmentedControl: { backgroundColor: '#F5F2EB', borderRadius: 20, flexDirection: 'row', marginTop: 0, padding: 4 },
   segment: { alignItems: 'center', borderRadius: 16, flex: 1, justifyContent: 'center', minHeight: 36, paddingHorizontal: 2, paddingVertical: 8 },
   activeSegment: { backgroundColor: '#EDA63A', elevation: 2, shadowColor: '#EDA63A', shadowOpacity: 0.18, shadowRadius: 5 },
@@ -301,6 +320,7 @@ const styles = StyleSheet.create({
   activeSegmentText: { color: '#FFFFFF' },
   panelStack: { gap: 8, marginTop: 14 },
   sectionHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 },
+  galleryHeaderLabel: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   sectionLabel: { color: '#718276', fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
   sectionActionButton: { alignItems: 'center', flexDirection: 'row', gap: 3 },
   sectionAction: { color: '#2E5B42', fontSize: 12, fontWeight: '800' },
@@ -328,8 +348,10 @@ const styles = StyleSheet.create({
   emptyGallery: { alignItems: 'center', backgroundColor: '#FAF7F0', borderColor: '#E8E0D3', borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', padding: 30 },
   emptyGalleryTitle: { color: '#425548', fontSize: 12, fontWeight: '800', marginTop: 8 },
   emptyGalleryText: { color: '#8A9B8F', fontSize: 9, marginTop: 4, textAlign: 'center' },
-  galleryGrid: { backgroundColor: '#FAF8F3', borderColor: '#EDE8DE', borderRadius: 22, borderWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 10 },
-  galleryImage: { aspectRatio: 1, backgroundColor: '#F4F0E6', borderColor: '#E5DDD0', borderRadius: 16, borderWidth: 1, width: '48%' },
+  galleryGrid: { backgroundColor: '#F9F6EE', flexDirection: 'row', flexWrap: 'wrap', gap: 3, padding: 3 },
+  galleryTile: { aspectRatio: 1, overflow: 'hidden', width: '32.2%' },
+  galleryImage: { backgroundColor: '#EFE8DC', height: '100%', width: '100%' },
+  galleryMoreText: { color: '#2A513B', fontSize: 11, fontWeight: '800' },
   modalOverlay: { backgroundColor: '#00000055', flex: 1, justifyContent: 'flex-end' },
   modalCard: { backgroundColor: '#FFFDF8', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   modalTitle: { color: '#1F2E23', fontSize: 20, fontWeight: '800', marginBottom: 14 },
@@ -343,6 +365,14 @@ const styles = StyleSheet.create({
   dateButtonIcon: { color: '#627C6B', fontSize: 19, fontWeight: '800' },
   modalDetailInput: { minHeight: 86, paddingTop: 12, textAlignVertical: 'top' },
   modalHint: { color: '#7D8F82', fontSize: 11, marginBottom: 8, marginTop: 5 },
+  notifyOption: { alignItems: 'center', backgroundColor: '#F4F0E6', borderColor: '#E5DDD0', borderRadius: 12, borderWidth: 1, flexDirection: 'row', gap: 8, marginBottom: 15, paddingHorizontal: 12, paddingVertical: 10 },
+  notifyOptionActive: { backgroundColor: '#EAF4ED', borderColor: '#CFE5D5' },
+  notifyOptionText: { color: '#718276', flex: 1, fontSize: 12, fontWeight: '700' },
+  notifyOptionTextActive: { color: '#2E5B42' },
+  notifyToggle: { backgroundColor: '#D8D2C6', borderRadius: 10, height: 20, justifyContent: 'center', padding: 2, width: 34 },
+  notifyToggleActive: { backgroundColor: '#8DB39A' },
+  notifyToggleThumb: { backgroundColor: '#FFFFFF', borderRadius: 8, height: 16, width: 16 },
+  notifyToggleThumbActive: { alignSelf: 'flex-end' },
   modalActions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end', marginTop: 16 },
   modalDelete: { alignItems: 'center', flexDirection: 'row', gap: 5, marginRight: 'auto', paddingHorizontal: 4 },
   modalDeleteText: { color: '#B9553E', fontSize: 13, fontWeight: '800' },

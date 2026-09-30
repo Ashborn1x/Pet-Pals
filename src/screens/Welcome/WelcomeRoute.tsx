@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useRootNavigationState, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { ONBOARDING_COMPLETED_KEY } from '../../constants/storage';
@@ -7,9 +7,12 @@ import { WelcomeScreen } from './WelcomeScreen';
 
 export function WelcomeRoute() {
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
   useEffect(() => {
+    if (!rootNavigationState?.key) return;
+
     let mounted = true;
 
     AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY)
@@ -25,7 +28,7 @@ export function WelcomeRoute() {
       });
 
     return () => { mounted = false; };
-  }, [router]);
+  }, [rootNavigationState?.key, router]);
 
   const handleAddPet = () => {
     router.push('/add-pet');

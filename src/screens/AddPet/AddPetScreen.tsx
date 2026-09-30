@@ -98,22 +98,26 @@ export function AddPetScreen({ onBack, onSave, initialPet, mode = 'create' }: Pr
   };
 
   const pickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow photo access to choose a picture for your pet.');
-      return;
-    }
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted && permission.accessPrivileges !== 'limited') {
+        Alert.alert('Photo access needed', 'Allow photo access to choose a picture for your pet.');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsEditing: false,
+        quality: 1,
+      });
 
-    if (!result.canceled) {
-      const selectedUri = result.assets[0].uri;
+      const selectedUri = !result.canceled ? result.assets?.[0]?.uri : null;
+      if (!selectedUri) return;
       setPendingPhotoUri(selectedUri);
       setPhotoChoiceOpen(true);
+    } catch (error) {
+      console.error('Unable to choose pet photo', error);
+      Alert.alert('Unable to add photo', 'Please choose another image and try again.');
     }
   };
 
@@ -381,7 +385,12 @@ function PhotoCropEditor({ visible, uri, saving, onCancel, onSave }: CropEditorP
     const cropSize = CROP_FRAME_SIZE / scale;
     const originX = Math.max(0, Math.min(size.width, -imageLeft / scale));
     const originY = Math.max(0, Math.min(size.height, -imageTop / scale));
-    onSave({ originX, originY, width: Math.min(cropSize, size.width - originX), height: Math.min(cropSize, size.height - originY) });
+    onSave({
+      originX: Math.round(originX),
+      originY: Math.round(originY),
+      width: Math.max(1, Math.round(Math.min(cropSize, size.width - originX))),
+      height: Math.max(1, Math.round(Math.min(cropSize, size.height - originY))),
+    });
   };
 
   const scale = imageSize ? Math.max(CROP_FRAME_SIZE / imageSize.width, CROP_FRAME_SIZE / imageSize.height) * zoom : 1;

@@ -9,7 +9,7 @@ type PetRow = {
 
 type CareLogRow = {
   id: string; pet_id: string; type: CareType; title: string; detail: string;
-  time: string; date: string; completed: number;
+  time: string; date: string; completed: number; notify: number;
 };
 
 type PetPhotoRow = { id: string; pet_id: string; uri: string };
@@ -97,6 +97,11 @@ export async function initializeDatabase(db: SQLiteDatabase) {
   }
   try {
     await db.execAsync('ALTER TABLE pets ADD COLUMN birth_date_estimated INTEGER NOT NULL DEFAULT 0');
+  } catch {
+    // Existing databases already have the column.
+  }
+  try {
+    await db.execAsync('ALTER TABLE care_logs ADD COLUMN notify INTEGER NOT NULL DEFAULT 0');
   } catch {
     // Existing databases already have the column.
   }
@@ -208,11 +213,18 @@ export async function deletePet(db: SQLiteDatabase, petId: string) {
 }
 
 export async function addPetPhoto(db: SQLiteDatabase, petId: string, uri: string) {
-  const photo: PetPhoto = { id: `photo-${Date.now()}`, petId, uri };
+  const photo: PetPhoto = { id: createPetPhotoId(), petId, uri };
   await db.runAsync('INSERT INTO pet_photos (id, pet_id, uri) VALUES (?, ?, ?)', photo.id, photo.petId, photo.uri);
   const cache = getCache(db);
   cache.photos = undefined;
   return photo;
+}
+
+let petPhotoSequence = 0;
+
+function createPetPhotoId() {
+  petPhotoSequence = (petPhotoSequence + 1) % 1000000;
+  return `photo-${Date.now()}-${petPhotoSequence}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export async function deletePetPhoto(db: SQLiteDatabase, photoId: string) {
@@ -225,8 +237,8 @@ export async function updateCareLog(db: SQLiteDatabase, id: string, completed: b
   invalidateLogs(db);
 }
 
-export async function updateCareLogDetails(db: SQLiteDatabase, id: string, title: string, detail: string, time: string, date: string) {
-  await db.runAsync('UPDATE care_logs SET title = ?, detail = ?, time = ?, date = ? WHERE id = ?', title, detail, time, date, id);
+export async function updateCareLogDetails(db: SQLiteDatabase, id: string, title: string, detail: string, time: string, date: string, notify = false) {
+  await db.runAsync('UPDATE care_logs SET title = ?, detail = ?, time = ?, date = ?, notify = ? WHERE id = ?', title, detail, time, date, notify ? 1 : 0, id);
   invalidateLogs(db);
 }
 
@@ -252,9 +264,9 @@ async function insertPet(db: SQLiteDatabase, pet: Pet) {
 
 async function insertCareLog(db: SQLiteDatabase, log: CareLog) {
   await db.runAsync(
-    `INSERT OR IGNORE INTO care_logs (id, pet_id, type, title, detail, time, date, completed)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    log.id, log.petId, log.type, log.title, log.detail, log.time, log.date, log.completed ? 1 : 0,
+    `INSERT OR IGNORE INTO care_logs (id, pet_id, type, title, detail, time, date, completed, notify)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    log.id, log.petId, log.type, log.title, log.detail, log.time, log.date, log.completed ? 1 : 0, log.notify ? 1 : 0,
   );
 }
 
@@ -283,5 +295,5 @@ function getAgeFromBirthDate(value?: string | null, estimated = false) {
 }
 
 function toCareLog(row: CareLogRow): CareLog {
-  return { id: row.id, petId: row.pet_id, type: row.type, title: row.title, detail: row.detail, time: row.time, date: row.date, completed: Boolean(row.completed) };
+  return { id: row.id, petId: row.pet_id, type: row.type, title: row.title, detail: row.detail, time: row.time, date: row.date, completed: Boolean(row.completed), notify: Boolean(row.notify) };
 }
