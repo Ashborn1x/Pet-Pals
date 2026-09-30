@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Circle, Clock, Heart, PawPrint, Plus, Syringe, Stethoscope, Trash2, Utensils, X } from 'lucide-react-native';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Circle, Clock, PawPrint, Plus, Syringe, Stethoscope, Trash2, Utensils, X } from 'lucide-react-native';
 import { SkeletonScreen } from '../../components/Loading/Skeleton';
 import { addCareLog, deleteCareLog, getCareLogs, getPets } from '../../database/petpalsDatabase';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -92,7 +92,7 @@ export function CalendarScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: 14 + Math.min(insets.top, 18) }]} showsVerticalScrollIndicator={false}>
         <View pointerEvents="none" style={styles.decorations}><View style={styles.leftBlob} /><View style={styles.rightBlob} /></View>
         <View style={styles.header}>
-          <View><View style={styles.titleRow}><PawPrint color="#476351" fill="#476351" size={25} /><Text style={styles.title}>Care Calendar</Text><Heart color="#476351" size={15} /></View><Text style={styles.subtitle}>Click any day to view & schedule pet routines</Text></View>
+          <View><View style={styles.titleRow}><PawPrint color="#476351" fill="#476351" size={25} /><Text style={styles.title}>Care Calendar</Text></View><Text style={styles.subtitle}>Click any day to view & schedule pet routines</Text></View>
         </View>
 
         <View style={styles.calendarCard}>

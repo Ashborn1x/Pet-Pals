@@ -5,22 +5,20 @@
     "version": "1.0.0",
     "userInterfaceStyle": "automatic",
     "orientation": "portrait",
-    "icon": "./src/assets/icons/icon.png",
+    "icon": "./src/assets/icons/petpals-app-icon.png",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./src/assets/icons/android-icon-foreground.png",
-        "backgroundImage": "./src/assets/icons/android-icon-background.png",
-        "monochromeImage": "./src/assets/icons/android-icon-monochrome.png"
+        "backgroundColor": "#F9F5EE",
+        "foregroundImage": "./src/assets/icons/petpals-app-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.ashborn1.PetPals"
     },
     "web": {
-      "favicon": "./src/assets/icons/favicon.png",
+      "favicon": "./src/assets/icons/petpals-app-icon.png",
       "bundler": "metro"
     },
     "plugins": [
